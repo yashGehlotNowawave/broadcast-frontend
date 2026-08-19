@@ -17,7 +17,7 @@ const eventListeners = new Set<EventListener>();
 export const getSocket = (): Socket | null => socket;
 
 export const initSocket = (): Socket => {
-  if (socket && socket.connected) {
+  if (socket) {
     return socket;
   }
 

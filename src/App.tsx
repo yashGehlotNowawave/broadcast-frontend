@@ -46,21 +46,16 @@ export const App: React.FC = () => {
 
       if (event === 'RAID_RECORDED' || event === 'MATCH_SESSION_UPDATED') {
         if (payload) {
-          setMatchData((prev) => ({
-            ...prev,
-            ...payload
-          }));
+          setMatchData((prev) => (prev ? { ...prev, ...payload } : payload));
         }
       } else if (event === 'RAIDER_SELECTED' || event === 'raider_selected') {
         const raiderId = payload?.selectedRaiderId ?? payload?.raider_player_id ?? payload?.player_id ?? payload?.selected_raider_id ?? payload?.session?.selected_raider_id;
         const raidingTeamId = payload?.currentRaidingTeamId ?? payload?.current_raiding_team_id ?? payload?.team_id ?? payload?.session?.current_raiding_team_id;
 
         setMatchData((prev) => {
-          if (!prev) return prev;
-
           let raiderName = payload?.raider_name || payload?.selected_raider_name;
           let jerseyNo = payload?.jersey_no || payload?.jerseyNo;
-          if (raiderId) {
+          if (raiderId && prev) {
             const allPlayers = [
               ...(prev.team_a?.mat || []), ...(prev.team_a?.bench || []), ...(prev.team_a?.substitute || []), ...(prev.team_a?.court_players || []),
               ...(prev.team_b?.mat || []), ...(prev.team_b?.bench || []), ...(prev.team_b?.substitute || []), ...(prev.team_b?.court_players || [])
@@ -73,6 +68,16 @@ export const App: React.FC = () => {
           }
 
           let displayRaiderName = raiderName || 'Active Raider';
+
+          if (!prev) {
+            return {
+              match_id: payload?.matchId || payload?.match_id,
+              current_raiding_team_id: raidingTeamId,
+              selected_raider_id: raiderId ? Number(raiderId) : undefined,
+              selected_raider_name: displayRaiderName,
+              update_message: `Raider Selected: ${displayRaiderName}`
+            } as any;
+          }
 
           return {
             ...prev,
