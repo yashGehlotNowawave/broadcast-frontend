@@ -1,0 +1,244 @@
+import React, { useState, useEffect } from 'react';
+import type { Tournament, MatchSummary, MatchStatusData } from './types';
+import { fetchTournaments, fetchMatches, fetchMatchStatus } from './services/api';
+import {
+  initSocket,
+  subscribeStatus,
+  subscribeEvents,
+  joinMatchRoom,
+  leaveMatchRoom,
+  joinTournamentRoom,
+  leaveTournamentRoom
+} from './services/socket';
+
+import { Header } from './components/Header';
+import { TournamentList } from './components/TournamentList';
+import { MatchList } from './components/MatchList';
+import { PKLMatchScoreboard } from './components/PKLMatchScoreboard';
+import { KabaddiCourtMat } from './components/KabaddiCourtMat';
+import { LiveTicker } from './components/LiveTicker';
+import { SocketInspector } from './components/SocketInspector';
+import { ConfigModal } from './components/ConfigModal';
+
+export const App: React.FC = () => {
+  const [activeView, setActiveView] = useState<'tournaments' | 'matches' | 'match_detail'>('tournaments');
+  const [tournaments, setTournaments] = useState<Tournament[]>([]);
+  const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
+
+  const [matches, setMatches] = useState<MatchSummary[]>([]);
+  const [selectedMatch, setSelectedMatch] = useState<MatchSummary | null>(null);
+  const [matchData, setMatchData] = useState<MatchStatusData | null>(null);
+
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isConnected, setIsConnected] = useState<boolean>(false);
+  const [isConfigOpen, setIsConfigOpen] = useState<boolean>(false);
+
+  // 1. Initialize WebSocket connection on mount & subscribe to status
+  useEffect(() => {
+    initSocket();
+    const unsubStatus = subscribeStatus((connected) => {
+      setIsConnected(connected);
+    });
+
+    // Handle real-time socket updates for active match
+    const unsubEvents = subscribeEvents((event, payload) => {
+      console.log('App reactive event handler:', event, payload);
+
+      if (event === 'RAID_RECORDED' || event === 'MATCH_SESSION_UPDATED') {
+        if (payload) {
+          setMatchData((prev) => ({
+            ...prev,
+            ...payload
+          }));
+        }
+      } else if (event === 'RAIDER_SELECTED' || event === 'raider_selected') {
+        const raiderId = payload?.selectedRaiderId ?? payload?.raider_player_id ?? payload?.player_id ?? payload?.selected_raider_id ?? payload?.session?.selected_raider_id;
+        const raidingTeamId = payload?.currentRaidingTeamId ?? payload?.current_raiding_team_id ?? payload?.team_id ?? payload?.session?.current_raiding_team_id;
+
+        setMatchData((prev) => {
+          if (!prev) return prev;
+
+          let raiderName = payload?.raider_name || payload?.selected_raider_name;
+          let jerseyNo = payload?.jersey_no || payload?.jerseyNo;
+          if (raiderId) {
+            const allPlayers = [
+              ...(prev.team_a?.mat || []), ...(prev.team_a?.bench || []), ...(prev.team_a?.substitute || []), ...(prev.team_a?.court_players || []),
+              ...(prev.team_b?.mat || []), ...(prev.team_b?.bench || []), ...(prev.team_b?.substitute || []), ...(prev.team_b?.court_players || [])
+            ];
+            const p = allPlayers.find((player: any) => Number(player.id || player.player_id) === Number(raiderId));
+            if (p) {
+              if (!raiderName) raiderName = p.full_name || p.name;
+              if (!jerseyNo) jerseyNo = p.jersey_no;
+            }
+          }
+
+          let displayRaiderName = raiderName || 'Active Raider';
+
+          return {
+            ...prev,
+            current_raiding_team_id: raidingTeamId ?? prev.current_raiding_team_id,
+            selected_raider_id: raiderId ? Number(raiderId) : prev.selected_raider_id,
+            selected_raider_name: displayRaiderName,
+            update_message: `Raider Selected: ${displayRaiderName}`
+          };
+        });
+      }
+    });
+
+    return () => {
+      unsubStatus();
+      unsubEvents();
+    };
+  }, []);
+
+  // 2. Fetch tournaments on load
+  useEffect(() => {
+    loadTournaments();
+  }, []);
+
+  const loadTournaments = async () => {
+    setIsLoading(true);
+    try {
+      const data = await fetchTournaments();
+      setTournaments(data);
+    } catch (err) {
+      console.error('Failed to load tournaments:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSelectTournament = async (t: Tournament) => {
+    setSelectedTournament(t);
+    setActiveView('matches');
+    setIsLoading(true);
+
+    // Subscribe to tournament stream room
+    joinTournamentRoom(t.id);
+
+    try {
+      const data = await fetchMatches(t.id);
+      setMatches(data);
+    } catch (err) {
+      console.error(`Failed to load matches for tournament ${t.id}:`, err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSelectMatch = async (m: MatchSummary) => {
+    setSelectedMatch(m);
+    setActiveView('match_detail');
+    setIsLoading(true);
+
+    const matchId = m.id || m.external_fixture_id;
+    if (matchId) {
+      // Subscribe to match stream room
+      joinMatchRoom(matchId);
+
+      try {
+        const data = await fetchMatchStatus(matchId);
+        
+        if (data) {
+          const sId = data.selected_raider_id || (data as any)?.session?.selected_raider_id;
+          if (sId) {
+            const allPlayers = [
+              ...(data.team_a?.mat || []), ...(data.team_a?.bench || []), ...(data.team_a?.substitute || []), ...(data.team_a?.court_players || []),
+              ...(data.team_b?.mat || []), ...(data.team_b?.bench || []), ...(data.team_b?.substitute || []), ...(data.team_b?.court_players || [])
+            ];
+            const p = allPlayers.find((player: any) => (player.id || player.player_id) === Number(sId));
+            if (p) {
+              data.selected_raider_name = p.full_name || p.name;
+            }
+          }
+          if (data.update_message && data.update_message.includes('undefined')) {
+            delete data.update_message;
+          }
+        }
+
+        setMatchData(data);
+      } catch (err) {
+        console.error(`Failed to load current status for match ${matchId}:`, err);
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      setIsLoading(false);
+    }
+  };
+
+  const handleNavigate = (view: 'tournaments' | 'matches') => {
+    if (view === 'tournaments') {
+      if (selectedTournament) leaveTournamentRoom(selectedTournament.id);
+      if (selectedMatch) leaveMatchRoom(selectedMatch.id || selectedMatch.external_fixture_id || '');
+      setSelectedTournament(null);
+      setSelectedMatch(null);
+      setMatchData(null);
+    } else if (view === 'matches' && selectedMatch) {
+      leaveMatchRoom(selectedMatch.id || selectedMatch.external_fixture_id || '');
+      setSelectedMatch(null);
+      setMatchData(null);
+    }
+    setActiveView(view);
+  };
+
+  return (
+    <div className="app-container">
+      <Header
+        activeView={activeView}
+        selectedTournamentName={selectedTournament?.name}
+        onNavigate={handleNavigate}
+        isConnected={isConnected}
+        onOpenConfig={() => setIsConfigOpen(true)}
+      />
+
+      <main className="main-content">
+        {activeView === 'tournaments' && (
+          <TournamentList
+            tournaments={tournaments}
+            onSelectTournament={handleSelectTournament}
+            isLoading={isLoading}
+          />
+        )}
+
+        {activeView === 'matches' && selectedTournament && (
+          <MatchList
+            tournamentName={selectedTournament.name}
+            matches={matches}
+            onSelectMatch={handleSelectMatch}
+            isLoading={isLoading}
+            onBack={() => handleNavigate('tournaments')}
+          />
+        )}
+
+        {activeView === 'match_detail' && (
+          <div>
+            <PKLMatchScoreboard
+              matchSummary={selectedMatch}
+              matchData={matchData}
+              onBack={() => handleNavigate('matches')}
+            />
+
+            <LiveTicker
+              lastRaid={matchData?.last_raid}
+              updateMessage={matchData?.update_message}
+            />
+
+            <KabaddiCourtMat matchData={matchData} />
+          </div>
+        )}
+      </main>
+
+      {/* Live Socket Debugger Inspector Drawer */}
+      <SocketInspector />
+
+      {/* Backend & Auth Configuration Modal */}
+      <ConfigModal
+        isOpen={isConfigOpen}
+        onClose={() => setIsConfigOpen(false)}
+      />
+    </div>
+  );
+};
+
+export default App;
