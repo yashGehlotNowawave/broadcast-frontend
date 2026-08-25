@@ -3,7 +3,7 @@ import type { Tournament, MatchSummary, MatchStatusData } from '../types';
 
 const defaultBackendUrl = import.meta.env.VITE_BACKEND_URL || 'https://scoring-tool-backend-974618494728.asia-south1.run.app';
 const savedUrl = localStorage.getItem('backend_base_url');
-let BASE_URL = (savedUrl && !savedUrl.includes('localhost:4000')) ? savedUrl : defaultBackendUrl;
+let BASE_URL = savedUrl || defaultBackendUrl;
 
 export const getBaseUrl = () => BASE_URL;
 
