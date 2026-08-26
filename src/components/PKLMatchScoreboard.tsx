@@ -1,7 +1,7 @@
 import React from 'react';
 import type { MatchStatusData, MatchSummary } from '../types';
 import { MapPin, ArrowLeft } from 'lucide-react';
-import confetti from 'canvas-confetti';
+import { SkyFireworks } from './SkyFireworks';
 
 interface PKLMatchScoreboardProps {
   matchSummary: MatchSummary | null;
@@ -49,68 +49,6 @@ export const PKLMatchScoreboard: React.FC<PKLMatchScoreboardProps> = ({
   // Selected raider display name
   const selectedRaiderName = matchData?.selected_raider_name || matchData?.last_raid?.raider_name || null;
 
-  // Firecrackers & celebration effect when completed match is opened
-  React.useEffect(() => {
-    if (!isCompleted) return;
-
-    // Trigger star & confetti fireworks celebration
-    const end = Date.now() + 3200; // 3.2 seconds duration
-    const colors = ['#ffd700', '#f59e0b', '#ef4444', '#10b981', '#3b82f6', '#ec4899', '#ffffff'];
-
-    // Left and right fireworks cannons
-    const interval = setInterval(() => {
-      if (Date.now() > end) {
-        clearInterval(interval);
-        return;
-      }
-
-      // Origin on winner's side if specific winner
-      const leftX = isTeamBWinner ? 0.65 : 0.15;
-      const rightX = isTeamAWinner ? 0.35 : 0.85;
-
-      confetti({
-        particleCount: 6,
-        angle: 60,
-        spread: 60,
-        origin: { x: leftX, y: 0.65 },
-        colors: colors,
-        shapes: ['star', 'circle']
-      });
-
-      confetti({
-        particleCount: 6,
-        angle: 120,
-        spread: 60,
-        origin: { x: rightX, y: 0.65 },
-        colors: colors,
-        shapes: ['star', 'circle']
-      });
-    }, 120);
-
-    // Initial big burst
-    confetti({
-      particleCount: 90,
-      spread: 110,
-      origin: { y: 0.45 },
-      colors: ['#ffd700', '#f59e0b', '#ef4444', '#10b981', '#ffffff'],
-      shapes: ['star']
-    });
-
-    const secondBurst = setTimeout(() => {
-      confetti({
-        particleCount: 110,
-        spread: 130,
-        origin: { y: 0.4 },
-        colors: ['#ffd700', '#f59e0b', '#ef4444', '#3b82f6']
-      });
-    }, 600);
-
-    return () => {
-      clearInterval(interval);
-      clearTimeout(secondBurst);
-    };
-  }, [isCompleted, matchNumber]);
-
   // Format Phase Label
   const formatPhaseLabel = (phase: string) => {
     const p = phase.toLowerCase();
@@ -146,7 +84,15 @@ export const PKLMatchScoreboard: React.FC<PKLMatchScoreboardProps> = ({
         <ArrowLeft size={15} /> Back to Matches
       </button>
 
-      <div className={`pkl-match-container ${isCompleted ? 'match-completed-container' : ''}`}>
+      <div className={`pkl-match-container ${isCompleted ? 'match-completed-container' : ''}`} style={{ position: 'relative', overflow: 'hidden' }}>
+        {/* Realistic Sky Fireworks burst directly over winning team when completed */}
+        {isCompleted && (
+          <SkyFireworks
+            winnerSide={isTeamAWinner ? 'left' : (isTeamBWinner ? 'right' : 'center')}
+            durationMs={5000}
+          />
+        )}
+
         {/* Top bar inside card */}
         <div className="scorebug-topbar">
           <span className="match-no-badge">MATCH {matchNumber}</span>
@@ -165,18 +111,10 @@ export const PKLMatchScoreboard: React.FC<PKLMatchScoreboardProps> = ({
         <div className="scorebug-body">
           <div className="pkl-scoreboard-grid">
             {/* Team A */}
-            <div className={`team-block ${isTeamAWinner ? 'winner' : ''} ${isTeamARaiding ? 'raiding' : (isTeamBRaiding ? 'defending' : '')}`}>
+            <div className={`team-block ${isTeamAWinner ? 'winner' : ''} ${!isCompleted ? (isTeamARaiding ? 'raiding' : (isTeamBRaiding ? 'defending' : '')) : ''}`}>
               <div className="team-logo-container">
                 {isTeamAWinner && (
-                  <>
-                    <div className="winner-crown-badge">🏆 WINNER</div>
-                    <div className="winner-stars-container">
-                      <span className="winner-star star-1">✨</span>
-                      <span className="winner-star star-2">⭐</span>
-                      <span className="winner-star star-3">🌟</span>
-                      <span className="winner-star star-4">✨</span>
-                    </div>
-                  </>
+                  <div className="winner-crown-badge">🏆 WINNER</div>
                 )}
                 <div className="team-logo-wrapper">
                   {logoA && !imgErrorA ? (
@@ -192,9 +130,13 @@ export const PKLMatchScoreboard: React.FC<PKLMatchScoreboardProps> = ({
                 </div>
               </div>
               <div className="team-name">{teamAName}</div>
-              <span className={`team-role-tag ${isTeamAWinner ? 'winner' : (isTeamARaiding ? 'raid' : 'defend')}`}>
-                {isTeamAWinner ? '🏆 WINNER' : (isTeamARaiding ? 'RAIDING' : (isTeamBRaiding ? 'DEFENDING' : 'COURT'))}
-              </span>
+              {isCompleted ? (
+                isTeamAWinner ? <span className="team-role-tag winner">🏆 WINNER</span> : null
+              ) : (
+                <span className={`team-role-tag ${isTeamARaiding ? 'raid' : 'defend'}`}>
+                  {isTeamARaiding ? 'RAIDING' : (isTeamBRaiding ? 'DEFENDING' : 'COURT')}
+                </span>
+              )}
             </div>
 
             {/* Score Center */}
@@ -242,18 +184,10 @@ export const PKLMatchScoreboard: React.FC<PKLMatchScoreboardProps> = ({
             </div>
 
             {/* Team B */}
-            <div className={`team-block ${isTeamBWinner ? 'winner' : ''} ${isTeamBRaiding ? 'raiding' : (isTeamARaiding ? 'defending' : '')}`}>
+            <div className={`team-block ${isTeamBWinner ? 'winner' : ''} ${!isCompleted ? (isTeamBRaiding ? 'raiding' : (isTeamARaiding ? 'defending' : '')) : ''}`}>
               <div className="team-logo-container">
                 {isTeamBWinner && (
-                  <>
-                    <div className="winner-crown-badge">🏆 WINNER</div>
-                    <div className="winner-stars-container">
-                      <span className="winner-star star-1">✨</span>
-                      <span className="winner-star star-2">⭐</span>
-                      <span className="winner-star star-3">🌟</span>
-                      <span className="winner-star star-4">✨</span>
-                    </div>
-                  </>
+                  <div className="winner-crown-badge">🏆 WINNER</div>
                 )}
                 <div className="team-logo-wrapper">
                   {logoB && !imgErrorB ? (
@@ -269,9 +203,13 @@ export const PKLMatchScoreboard: React.FC<PKLMatchScoreboardProps> = ({
                 </div>
               </div>
               <div className="team-name">{teamBName}</div>
-              <span className={`team-role-tag ${isTeamBWinner ? 'winner' : (isTeamBRaiding ? 'raid' : 'defend')}`}>
-                {isTeamBWinner ? '🏆 WINNER' : (isTeamBRaiding ? 'RAIDING' : (isTeamARaiding ? 'DEFENDING' : 'COURT'))}
-              </span>
+              {isCompleted ? (
+                isTeamBWinner ? <span className="team-role-tag winner">🏆 WINNER</span> : null
+              ) : (
+                <span className={`team-role-tag ${isTeamBRaiding ? 'raid' : 'defend'}`}>
+                  {isTeamBRaiding ? 'RAIDING' : (isTeamARaiding ? 'DEFENDING' : 'COURT')}
+                </span>
+              )}
             </div>
           </div>
 
