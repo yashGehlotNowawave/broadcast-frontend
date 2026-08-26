@@ -99,7 +99,6 @@ export const MatchList: React.FC<MatchListProps> = ({
                   <div className="match-card-score-row">
                     <div className={`match-card-team ${isWinnerA ? 'winner' : ''} ${isWinnerB ? 'loser' : ''}`}>
                       <div className="match-card-team-name">{m.team_a_placeholder || 'Team A'}</div>
-                      {isWinnerA && <span className="match-card-winner-pill">🏆 WINNER</span>}
                       <div className="match-card-team-score">{teamAScore}</div>
                     </div>
 
@@ -107,7 +106,6 @@ export const MatchList: React.FC<MatchListProps> = ({
 
                     <div className={`match-card-team ${isWinnerB ? 'winner' : ''} ${isWinnerA ? 'loser' : ''}`}>
                       <div className="match-card-team-name">{m.team_b_placeholder || 'Team B'}</div>
-                      {isWinnerB && <span className="match-card-winner-pill">🏆 WINNER</span>}
                       <div className="match-card-team-score">{teamBScore}</div>
                     </div>
                   </div>

@@ -30,6 +30,9 @@ export const PKLMatchScoreboard: React.FC<PKLMatchScoreboardProps> = ({
   const fiveRaidsA = matchData?.team_a?.five_raids_score ?? matchSummary?.session?.five_raids_team_a_score ?? 0;
   const fiveRaidsB = matchData?.team_b?.five_raids_score ?? matchSummary?.session?.five_raids_team_b_score ?? 0;
 
+  const goldenRaidA = matchData?.team_a?.golden_raid_score ?? matchData?.session?.golden_raid_team_a_score ?? matchSummary?.session?.golden_raid_team_a_score ?? 0;
+  const goldenRaidB = matchData?.team_b?.golden_raid_score ?? matchData?.session?.golden_raid_team_b_score ?? matchSummary?.session?.golden_raid_team_b_score ?? 0;
+
   const logoA = matchData?.team_a?.logo_url || matchSummary?.team1_logo || '';
   const logoB = matchData?.team_b?.logo_url || matchSummary?.team2_logo || '';
 
@@ -89,7 +92,7 @@ export const PKLMatchScoreboard: React.FC<PKLMatchScoreboardProps> = ({
         {isCompleted && (
           <SkyFireworks
             winnerSide={isTeamAWinner ? 'left' : (isTeamBWinner ? 'right' : 'center')}
-            durationMs={5000}
+            durationMs={6000}
           />
         )}
 
@@ -113,9 +116,6 @@ export const PKLMatchScoreboard: React.FC<PKLMatchScoreboardProps> = ({
             {/* Team A */}
             <div className={`team-block ${isTeamAWinner ? 'winner' : ''} ${!isCompleted ? (isTeamARaiding ? 'raiding' : (isTeamBRaiding ? 'defending' : '')) : ''}`}>
               <div className="team-logo-container">
-                {isTeamAWinner && (
-                  <div className="winner-crown-badge">🏆 WINNER</div>
-                )}
                 <div className="team-logo-wrapper">
                   {logoA && !imgErrorA ? (
                     <img
@@ -145,6 +145,7 @@ export const PKLMatchScoreboard: React.FC<PKLMatchScoreboardProps> = ({
                 <span className="score-number">{teamAScore}</span>
                 {extraTimeA > 0 && <span className="sub-score">ET: {extraTimeA}</span>}
                 {fiveRaidsA > 0 && <span className="sub-score">5R: {fiveRaidsA}</span>}
+                {(goldenRaidA > 0 || rawPhase.toLowerCase() === 'golden_raid') && <span className="sub-score">GR: {goldenRaidA}</span>}
               </div>
 
               <div className="score-divider-container">
@@ -180,15 +181,13 @@ export const PKLMatchScoreboard: React.FC<PKLMatchScoreboardProps> = ({
                 <span className="score-number">{teamBScore}</span>
                 {extraTimeB > 0 && <span className="sub-score">ET: {extraTimeB}</span>}
                 {fiveRaidsB > 0 && <span className="sub-score">5R: {fiveRaidsB}</span>}
+                {(goldenRaidB > 0 || rawPhase.toLowerCase() === 'golden_raid') && <span className="sub-score">GR: {goldenRaidB}</span>}
               </div>
             </div>
 
             {/* Team B */}
             <div className={`team-block ${isTeamBWinner ? 'winner' : ''} ${!isCompleted ? (isTeamBRaiding ? 'raiding' : (isTeamARaiding ? 'defending' : '')) : ''}`}>
               <div className="team-logo-container">
-                {isTeamBWinner && (
-                  <div className="winner-crown-badge">🏆 WINNER</div>
-                )}
                 <div className="team-logo-wrapper">
                   {logoB && !imgErrorB ? (
                     <img
