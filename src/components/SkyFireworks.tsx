@@ -16,21 +16,21 @@ const PYRO_PALETTES = [
   },
   {
     name: 'Electric Blue & Ruby Ring',
-    primary: '#00e5ff',
+    primary: '#001affff',
     secondary: '#ff1744',
     core: '#ffffff',
     type: 'chrysanthemum'
   },
   {
     name: 'Emerald & Gold Peony',
-    primary: '#00e676',
+    primary: '#0cad24ff',
     secondary: '#ffd600',
     core: '#fff9c4',
     type: 'peony'
   },
   {
     name: 'Royal Purple & Saffron Palm',
-    primary: '#d500f9',
+    primary: '#f20606ff',
     secondary: '#ff6d00',
     core: '#ffffff',
     type: 'palm'
@@ -38,7 +38,7 @@ const PYRO_PALETTES = [
   {
     name: 'Titanium Silver Sparkler & Cyan',
     primary: '#ffffff',
-    secondary: '#00f0ff',
+    secondary: '#1500ffff',
     core: '#ffd700',
     type: 'strobe'
   }
