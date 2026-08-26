@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import type { Tournament, MatchSummary, MatchStatusData } from './types';
 import { fetchTournaments, fetchMatches, fetchMatchStatus } from './services/api';
 import {
@@ -32,6 +32,22 @@ export const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [isConfigOpen, setIsConfigOpen] = useState<boolean>(false);
+
+  // Helper to synchronize URL query parameters without reloading
+  const updateUrl = (tourId?: number | string | null, matchId?: number | string | null) => {
+    const url = new URL(window.location.href);
+    if (tourId) {
+      url.searchParams.set('tournament', String(tourId));
+    } else {
+      url.searchParams.delete('tournament');
+    }
+    if (matchId) {
+      url.searchParams.set('match', String(matchId));
+    } else {
+      url.searchParams.delete('match');
+    }
+    window.history.pushState({}, '', url.pathname + url.search);
+  };
 
   // 1. Initialize WebSocket connection on mount & subscribe to status
   useEffect(() => {
@@ -96,26 +112,91 @@ export const App: React.FC = () => {
     };
   }, []);
 
-  // 2. Fetch tournaments on load
-  useEffect(() => {
-    loadTournaments();
-  }, []);
-
-  const loadTournaments = async () => {
+  // 2. Restore state from URL on load & handle browser back/forward
+  const restoreFromUrl = useCallback(async () => {
     setIsLoading(true);
     try {
-      const data = await fetchTournaments();
-      setTournaments(data);
+      const allTournaments = await fetchTournaments();
+      setTournaments(allTournaments);
+
+      const params = new URLSearchParams(window.location.search);
+      const urlTournamentId = params.get('tournament');
+      const urlMatchId = params.get('match');
+
+      if (urlTournamentId) {
+        const matchedTournament = allTournaments.find(
+          (t) => String(t.id) === String(urlTournamentId)
+        ) || { id: Number(urlTournamentId), name: `Tournament #${urlTournamentId}` };
+
+        setSelectedTournament(matchedTournament);
+        joinTournamentRoom(matchedTournament.id);
+
+        const tourMatches = await fetchMatches(matchedTournament.id);
+        setMatches(tourMatches);
+
+        if (urlMatchId) {
+          const matchedMatch = tourMatches.find(
+            (m) => String(m.id || m.external_fixture_id) === String(urlMatchId)
+          ) || ({ id: Number(urlMatchId), tournament_id: matchedTournament.id, team_a_placeholder: 'Team A', team_b_placeholder: 'Team B', status: 'live' } as MatchSummary);
+
+          setSelectedMatch(matchedMatch);
+          setActiveView('match_detail');
+          joinMatchRoom(urlMatchId);
+
+          try {
+            const data = await fetchMatchStatus(urlMatchId);
+            if (data) {
+              const sId = data.selected_raider_id || (data as any)?.session?.selected_raider_id;
+              if (sId) {
+                const allPlayers = [
+                  ...(data.team_a?.mat || []), ...(data.team_a?.bench || []), ...(data.team_a?.substitute || []), ...(data.team_a?.court_players || []),
+                  ...(data.team_b?.mat || []), ...(data.team_b?.bench || []), ...(data.team_b?.substitute || []), ...(data.team_b?.court_players || [])
+                ];
+                const p = allPlayers.find((player: any) => (player.id || player.player_id) === Number(sId));
+                if (p) {
+                  data.selected_raider_name = p.full_name || p.name;
+                }
+              }
+              if (data.update_message && data.update_message.includes('undefined')) {
+                delete data.update_message;
+              }
+            }
+            setMatchData(data);
+          } catch (err) {
+            console.error(`Failed to load match status for ${urlMatchId}:`, err);
+          }
+        } else {
+          setActiveView('matches');
+        }
+      } else {
+        setActiveView('tournaments');
+      }
     } catch (err) {
-      console.error('Failed to load tournaments:', err);
+      console.error('Failed in restoreFromUrl:', err);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    restoreFromUrl();
+
+    const handlePopState = () => {
+      restoreFromUrl();
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [restoreFromUrl]);
 
   const handleSelectTournament = async (t: Tournament) => {
     setSelectedTournament(t);
+    setSelectedMatch(null);
+    setMatchData(null);
     setActiveView('matches');
+    updateUrl(t.id, null);
     setIsLoading(true);
 
     // Subscribe to tournament stream room
@@ -134,9 +215,10 @@ export const App: React.FC = () => {
   const handleSelectMatch = async (m: MatchSummary) => {
     setSelectedMatch(m);
     setActiveView('match_detail');
+    const matchId = m.id || m.external_fixture_id;
+    updateUrl(selectedTournament?.id || m.tournament_id, matchId);
     setIsLoading(true);
 
-    const matchId = m.id || m.external_fixture_id;
     if (matchId) {
       // Subscribe to match stream room
       joinMatchRoom(matchId);
@@ -179,10 +261,12 @@ export const App: React.FC = () => {
       setSelectedTournament(null);
       setSelectedMatch(null);
       setMatchData(null);
-    } else if (view === 'matches' && selectedMatch) {
-      leaveMatchRoom(selectedMatch.id || selectedMatch.external_fixture_id || '');
+      updateUrl(null, null);
+    } else if (view === 'matches' && selectedTournament) {
+      if (selectedMatch) leaveMatchRoom(selectedMatch.id || selectedMatch.external_fixture_id || '');
       setSelectedMatch(null);
       setMatchData(null);
+      updateUrl(selectedTournament.id, null);
     }
     setActiveView(view);
   };

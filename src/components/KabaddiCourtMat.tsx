@@ -7,30 +7,18 @@ interface KabaddiCourtMatProps {
 }
 
 export const KabaddiCourtMat: React.FC<KabaddiCourtMatProps> = ({ matchData }) => {
-  const raidingTeamId = matchData?.current_raiding_team_id;
+  const raidingTeamId = matchData?.current_raiding_team_id ?? (matchData as any)?.session?.current_raiding_team_id;
   const teamAId = matchData?.team_a?.team_id || matchData?.team_a?.id;
 
-  // By default in reference image: Team A is Defending (Delhi Capitals), Team B is Raiding (New Zealand)
-  const isTeamARaiding = raidingTeamId ? Number(raidingTeamId) === Number(teamAId) : false;
-  const defendingTeam = isTeamARaiding ? matchData?.team_a : matchData?.team_b;
-  const raidingTeam = isTeamARaiding ? matchData?.team_b : matchData?.team_a;
+  // Correctly identify raiding team vs defending team
+  const isTeamARaiding = raidingTeamId && teamAId ? Number(raidingTeamId) === Number(teamAId) : false;
+  const raidingTeam = isTeamARaiding ? matchData?.team_a : matchData?.team_b;
+  const defendingTeam = isTeamARaiding ? matchData?.team_b : matchData?.team_a;
 
-  const defendingTeamName = defendingTeam?.team_name || (isTeamARaiding ? 'Team A' : 'Delhi Capitals');
-  const raidingTeamName = raidingTeam?.team_name || (isTeamARaiding ? 'Team B' : 'New Zealand National Team');
+  const defendingTeamName = defendingTeam?.team_name || defendingTeam?.name || (isTeamARaiding ? 'Team B' : 'Team A');
+  const raidingTeamName = raidingTeam?.team_name || raidingTeam?.name || (isTeamARaiding ? 'Team A' : 'Team B');
 
-  let courtPlayers: Player[] = defendingTeam?.mat || defendingTeam?.court_players || [];
-  
-  // Sample players for rich presentation if court is empty
-  if (courtPlayers.length === 0) {
-    courtPlayers = [
-      { player_id: 81, jersey_no: '81', full_name: 'Suryakumar Yadav' },
-      { player_id: 288, jersey_no: '288', full_name: 'Marco Jansen' },
-      { player_id: 587, jersey_no: '587', full_name: 'Akash Deep' },
-      { player_id: 45, jersey_no: '45', full_name: 'Gerald Coetzee' },
-      { player_id: 332, jersey_no: '332', full_name: 'Kuldeep Yadav' },
-      { player_id: 734, jersey_no: '734', full_name: 'Kane Williamson' }
-    ];
-  }
+  const courtPlayers: Player[] = defendingTeam?.mat || defendingTeam?.court_players || [];
 
   const selectedRaiderId = matchData?.selected_raider_id || (matchData as any)?.session?.selected_raider_id;
 
@@ -43,10 +31,41 @@ export const KabaddiCourtMat: React.FC<KabaddiCourtMatProps> = ({ matchData }) =
     ? allPlayers.find((p: any) => Number(p.id || p.player_id) === Number(selectedRaiderId))
     : null;
 
-  const raiderJerseyNo = raiderPlayer?.jersey_no || '288';
-  const raiderDisplayName = raiderPlayer?.full_name || raiderPlayer?.name || matchData?.selected_raider_name || matchData?.last_raid?.raider_name || 'Marco Jansen';
+  const raiderJerseyNo = raiderPlayer?.jersey_no;
+  const raiderDisplayName = raiderPlayer?.full_name || raiderPlayer?.name || matchData?.selected_raider_name || matchData?.last_raid?.raider_name || 'Active Raider';
 
   const isDoOrDie = matchData?.is_do_or_die_raid || matchData?.last_raid?.is_do_or_die;
+
+  // Live tick for suspension countdowns
+  const [, setTick] = React.useState(0);
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      setTick((t) => t + 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const getSuspensionTime = (p: Player | null | undefined) => {
+    if (!p) return null;
+    if (p.suspension_remaining_seconds != null && p.suspension_remaining_seconds > 0) {
+      const mins = Math.floor(p.suspension_remaining_seconds / 60);
+      const secs = p.suspension_remaining_seconds % 60;
+      return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    }
+    if (p.suspended_until) {
+      const diffMs = new Date(p.suspended_until).getTime() - Date.now();
+      if (diffMs > 0) {
+        const totalSec = Math.floor(diffMs / 1000);
+        const mins = Math.floor(totalSec / 60);
+        const secs = totalSec % 60;
+        return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+      }
+    }
+    return null;
+  };
+
+  const raiderCardType = raiderPlayer?.card_type ? raiderPlayer.card_type.toLowerCase() : null;
+  const raiderSuspTime = getSuspensionTime(raiderPlayer);
 
   return (
     <div className="court-section">
@@ -71,14 +90,38 @@ export const KabaddiCourtMat: React.FC<KabaddiCourtMatProps> = ({ matchData }) =
           </div>
 
           <div className="players-court-row">
-            {courtPlayers.map((p, idx) => (
-              <div key={p.player_id || p.id || idx} className="player-horizontal-pill">
-                <div className="player-round-badge">
-                  {p.jersey_no || idx + 1}
-                </div>
-                <span className="player-pill-name">{p.full_name || p.name}</span>
+            {courtPlayers.length === 0 ? (
+              <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', padding: '0.5rem 0' }}>
+                All Out / No players on court
               </div>
-            ))}
+            ) : (
+              courtPlayers.map((p, idx) => {
+                const cardType = p.card_type ? p.card_type.toLowerCase() : null;
+                const suspTime = getSuspensionTime(p);
+
+                return (
+                  <div key={p.player_id || p.id || idx} className="player-court-item">
+                    <div className="player-horizontal-pill">
+                      <div className="player-round-badge">
+                        {p.jersey_no || idx + 1}
+                        {cardType && (
+                          <span
+                            className={`player-card-flag ${cardType}`}
+                            title={`${cardType.toUpperCase()} Card`}
+                          />
+                        )}
+                      </div>
+                      <span className="player-pill-name">{p.full_name || p.name}</span>
+                    </div>
+                    {suspTime && (
+                      <div className="player-suspension-countdown">
+                        {suspTime}
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
 
@@ -89,13 +132,26 @@ export const KabaddiCourtMat: React.FC<KabaddiCourtMatProps> = ({ matchData }) =
           </div>
 
           <div className="players-court-row">
-            <div className="player-horizontal-pill raider-pill">
-              <div className="player-round-badge raider-badge">
-                {raiderJerseyNo ? raiderJerseyNo : <Zap size={14} />}
+            <div className="player-court-item">
+              <div className="player-horizontal-pill raider-pill">
+                <div className="player-round-badge raider-badge">
+                  {raiderJerseyNo ? raiderJerseyNo : <Zap size={14} />}
+                  {raiderCardType && (
+                    <span
+                      className={`player-card-flag ${raiderCardType}`}
+                      title={`${raiderCardType.toUpperCase()} Card`}
+                    />
+                  )}
+                </div>
+                <span className="player-pill-name">
+                  {raiderDisplayName} {raiderJerseyNo ? `(#${raiderJerseyNo})` : ''}
+                </span>
               </div>
-              <span className="player-pill-name">
-                {raiderDisplayName}
-              </span>
+              {raiderSuspTime && (
+                <div className="player-suspension-countdown">
+                  {raiderSuspTime}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -104,16 +160,16 @@ export const KabaddiCourtMat: React.FC<KabaddiCourtMatProps> = ({ matchData }) =
       {/* Squad Summary Stats */}
       <div className="squad-summary-grid">
         <div className="squad-summary-cell">
-          <div className="squad-summary-label">{matchData?.team_a?.team_name || 'Delhi Capitals'} Squad</div>
+          <div className="squad-summary-label">{matchData?.team_a?.team_name || matchData?.team_a?.name || 'Team A'} Squad</div>
           <div className="squad-summary-value">
-            Court {matchData?.team_a?.mat?.length || 6} &middot; Bench {matchData?.team_a?.bench?.length || 5} &middot; Sub {matchData?.team_a?.substitute?.length || 2}
+            Court {matchData?.team_a?.mat?.length || 0} &middot; Bench {matchData?.team_a?.bench?.length || 0} &middot; Sub {matchData?.team_a?.substitute?.length || 0}
           </div>
         </div>
 
         <div className="squad-summary-cell">
-          <div className="squad-summary-label">{matchData?.team_b?.team_name || 'New Zealand National'} Squad</div>
+          <div className="squad-summary-label">{matchData?.team_b?.team_name || matchData?.team_b?.name || 'Team B'} Squad</div>
           <div className="squad-summary-value">
-            Court {matchData?.team_b?.mat?.length || 7} &middot; Bench {matchData?.team_b?.bench?.length || 4} &middot; Sub {matchData?.team_b?.substitute?.length || 1}
+            Court {matchData?.team_b?.mat?.length || 0} &middot; Bench {matchData?.team_b?.bench?.length || 0} &middot; Sub {matchData?.team_b?.substitute?.length || 0}
           </div>
         </div>
       </div>

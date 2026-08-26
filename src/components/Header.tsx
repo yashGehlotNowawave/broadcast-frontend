@@ -20,9 +20,9 @@ export const Header: React.FC<HeaderProps> = ({
     <header className="navbar">
       <div className="navbar-inner">
         <div className="brand-logo" onClick={() => onNavigate('tournaments')} role="button" tabIndex={0}>
-          <div className="brand-mark">P</div>
+          <div className="brand-mark">YR</div>
           <span className="brand-wordmark">
-            PKL <b>BROADCAST</b>
+            YASH RAJ <b>BROADCASTING</b>
           </span>
           <span className="brand-badge">
             <span className="rec-dot" />

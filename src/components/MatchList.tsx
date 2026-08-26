@@ -55,7 +55,7 @@ export const MatchList: React.FC<MatchListProps> = ({
       <div style={{ marginBottom: '1.2rem', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <h1 className="page-heading">{tournamentName.toUpperCase()} - MATCHES</h1>
-          <p className="page-subtext">Select a match to open the PKL Live Scoreboard &amp; Court View</p>
+          <p className="page-subtext">Select a match to open the Live Scoreboard &amp; Court View</p>
         </div>
         <span className="count-chip">{matches.length} MATCHES</span>
       </div>
@@ -72,6 +72,11 @@ export const MatchList: React.FC<MatchListProps> = ({
             const teamBScore = m.final_team_b_score ?? m.session?.total_team_b_score ?? 0;
             const rawStatus = m.session?.game_phase || m.status || 'MATCH COMPLETED';
             const matchNo = m.match_number || m.id || index + 1;
+            const isMatchCompleted = rawStatus.toLowerCase().includes('completed') || rawStatus.toLowerCase().includes('full');
+            const isWinnerA = isMatchCompleted && teamAScore > teamBScore;
+            const isWinnerB = isMatchCompleted && teamBScore > teamAScore;
+            const isTie = isMatchCompleted && teamAScore === teamBScore;
+            const diff = Math.abs(teamAScore - teamBScore);
 
             return (
               <div
@@ -92,18 +97,28 @@ export const MatchList: React.FC<MatchListProps> = ({
                   </div>
 
                   <div className="match-card-score-row">
-                    <div className="match-card-team">
+                    <div className={`match-card-team ${isWinnerA ? 'winner' : ''} ${isWinnerB ? 'loser' : ''}`}>
                       <div className="match-card-team-name">{m.team_a_placeholder || 'Team A'}</div>
+                      {isWinnerA && <span className="match-card-winner-pill">🏆 WINNER</span>}
                       <div className="match-card-team-score">{teamAScore}</div>
                     </div>
 
                     <div className="match-card-vs">vs</div>
 
-                    <div className="match-card-team">
+                    <div className={`match-card-team ${isWinnerB ? 'winner' : ''} ${isWinnerA ? 'loser' : ''}`}>
                       <div className="match-card-team-name">{m.team_b_placeholder || 'Team B'}</div>
+                      {isWinnerB && <span className="match-card-winner-pill">🏆 WINNER</span>}
                       <div className="match-card-team-score">{teamBScore}</div>
                     </div>
                   </div>
+
+                  {isMatchCompleted && (
+                    <div className="match-card-outcome-banner">
+                      {isTie
+                        ? '🤝 MATCH TIED'
+                        : `🏆 ${isWinnerA ? m.team_a_placeholder : m.team_b_placeholder} WON BY ${diff} ${diff === 1 ? 'PT' : 'PTS'}`}
+                    </div>
+                  )}
 
                   <div className="card-subtext" style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
                     <MapPin size={14} style={{ color: 'var(--text-muted)' }} />
