@@ -1,6 +1,6 @@
 import React from 'react';
 import type { MatchSummary } from '../types';
-import { Tv, MapPin, ArrowRight } from 'lucide-react';
+import { Tv, MapPin, ArrowLeft, ArrowRight } from 'lucide-react';
 
 interface MatchListProps {
   tournamentName: string;
@@ -19,92 +19,103 @@ export const MatchList: React.FC<MatchListProps> = ({
 }) => {
   if (isLoading) {
     return (
-      <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-muted)' }}>
-        <Tv size={48} style={{ color: 'var(--accent-gold)', marginBottom: '1rem' }} />
-        <h2>Fetching Matches for {tournamentName}...</h2>
+      <div className="empty-state">
+        <Tv size={44} style={{ color: 'var(--pkl-orange)' }} />
+        <h2>Fetching Matches for {tournamentName}&hellip;</h2>
       </div>
     );
   }
 
+  const getStatusBadgeClass = (status: string) => {
+    const s = status.toLowerCase();
+    if (s.includes('five')) return 'status-pill five-raids';
+    if (s.includes('golden')) return 'status-pill golden-raid';
+    if (s.includes('extra')) return 'status-pill extra-time';
+    if (s.includes('completed') || s.includes('full')) return 'status-pill completed';
+    return 'status-pill live';
+  };
+
+  const formatStatusLabel = (status: string) => {
+    const s = status.toLowerCase();
+    if (s === 'completed') return 'MATCH COMPLETED';
+    if (s === 'five_raids') return 'FIVE RAIDS';
+    if (s === 'golden_raid') return 'GOLDEN RAID';
+    if (s === 'extra_time') return 'EXTRA TIME';
+    if (s === 'second_half') return 'SECOND HALF';
+    if (s === 'first_half') return 'FIRST HALF';
+    return status.replace(/_/g, ' ').toUpperCase();
+  };
+
   return (
     <div>
-      <div style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <button onClick={onBack} className="back-link">
+        <ArrowLeft size={15} /> Back to Tournaments
+      </button>
+
+      <div style={{ marginBottom: '1.2rem', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <button
-            onClick={onBack}
-            style={{
-              background: 'none',
-              color: 'var(--accent-gold)',
-              fontSize: '0.9rem',
-              fontWeight: 700,
-              marginBottom: '0.4rem',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.3rem'
-            }}
-          >
-            ← Back to Tournaments
-          </button>
-          <h1 style={{ fontSize: '1.8rem', fontWeight: 800, color: '#fff' }}>{tournamentName.toUpperCase()} - MATCHES</h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>Select a match to open the PKL Live Scoreboard & Court View</p>
+          <h1 className="page-heading">{tournamentName.toUpperCase()} - MATCHES</h1>
+          <p className="page-subtext">Select a match to open the PKL Live Scoreboard &amp; Court View</p>
         </div>
-        <span className="brand-badge" style={{ fontSize: '0.85rem' }}>{matches.length} MATCHES</span>
+        <span className="count-chip">{matches.length} MATCHES</span>
       </div>
 
       {matches.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-muted)' }}>
+        <div className="empty-state">
           <h2>No Matches Scheduled Yet</h2>
+          <p>Check back later or select a different tournament.</p>
         </div>
       ) : (
         <div className="cards-grid">
-          {matches.map((m) => {
+          {matches.map((m, index) => {
             const teamAScore = m.final_team_a_score ?? m.session?.total_team_a_score ?? 0;
             const teamBScore = m.final_team_b_score ?? m.session?.total_team_b_score ?? 0;
-            const statusLabel = m.session?.game_phase || m.status || 'UPCOMING';
+            const rawStatus = m.session?.game_phase || m.status || 'MATCH COMPLETED';
+            const matchNo = m.match_number || m.id || index + 1;
 
             return (
-              <div key={m.id || m.external_fixture_id} className="card-item" onClick={() => onSelectMatch(m)}>
+              <div
+                key={m.id || m.external_fixture_id || index}
+                className="card-item"
+                onClick={() => onSelectMatch(m)}
+                role="button"
+                tabIndex={0}
+              >
                 <div>
                   <div className="card-header">
-                    <span className="card-subtext" style={{ fontWeight: 800, color: 'var(--accent-gold)' }}>
-                      Match #{m.match_number || m.id}
+                    <span className="card-match-no">
+                      Match #{matchNo}
                     </span>
-                    <span className={`status-pill ${statusLabel === 'completed' ? 'completed' : 'live'}`}>
-                      {statusLabel.replace('_', ' ')}
+                    <span className={getStatusBadgeClass(rawStatus)}>
+                      {formatStatusLabel(rawStatus)}
                     </span>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '1rem 0' }}>
-                    <div style={{ textAlign: 'center', flex: 1 }}>
-                      <div style={{ fontWeight: 800, fontSize: '1.2rem', color: '#fff' }}>
-                        {m.team_a_placeholder}
-                      </div>
-                      <div style={{ fontSize: '2rem', fontWeight: 900, fontFamily: 'var(--font-number)', color: 'var(--accent-gold)' }}>
-                        {teamAScore}
-                      </div>
+                  <div className="match-card-score-row">
+                    <div className="match-card-team">
+                      <div className="match-card-team-name">{m.team_a_placeholder || 'Team A'}</div>
+                      <div className="match-card-team-score">{teamAScore}</div>
                     </div>
 
-                    <div style={{ fontSize: '0.9rem', fontWeight: 900, color: 'var(--text-muted)' }}>VS</div>
+                    <div className="match-card-vs">vs</div>
 
-                    <div style={{ textAlign: 'center', flex: 1 }}>
-                      <div style={{ fontWeight: 800, fontSize: '1.2rem', color: '#fff' }}>
-                        {m.team_b_placeholder}
-                      </div>
-                      <div style={{ fontSize: '2rem', fontWeight: 900, fontFamily: 'var(--font-number)', color: 'var(--accent-gold)' }}>
-                        {teamBScore}
-                      </div>
+                    <div className="match-card-team">
+                      <div className="match-card-team-name">{m.team_b_placeholder || 'Team B'}</div>
+                      <div className="match-card-team-score">{teamBScore}</div>
                     </div>
                   </div>
 
-                  <div className="card-subtext" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.5rem' }}>
-                    <MapPin size={14} />
-                    <span>{m.venue_name || 'Indoor Stadium'}</span>
+                  <div className="card-subtext" style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                    <MapPin size={14} style={{ color: 'var(--text-muted)' }} />
+                    <span>{m.venue_name || 'Kanteerva Indoor Stadium'}</span>
                   </div>
                 </div>
 
-                <div style={{ marginTop: '1.2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '0.8rem' }}>
-                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--accent-gold)' }}>Open Live Scorecard</span>
-                  <ArrowRight size={18} style={{ color: 'var(--accent-gold)' }} />
+                <div className="card-footer">
+                  <span className="card-footer-label">
+                    Open Live Scorecard
+                  </span>
+                  <ArrowRight size={16} className="card-footer-icon" />
                 </div>
               </div>
             );

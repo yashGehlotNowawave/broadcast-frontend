@@ -7,6 +7,30 @@ interface ConfigModalProps {
   onClose: () => void;
 }
 
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  padding: '0.65rem 0.85rem',
+  border: '1px solid #cbd5e1',
+  borderRadius: '8px',
+  background: '#ffffff',
+  color: '#0f172a',
+  fontSize: '0.9rem',
+  fontFamily: 'var(--font-main)',
+  outline: 'none',
+  boxSizing: 'border-box'
+};
+
+const labelStyle: React.CSSProperties = {
+  fontSize: '0.8rem',
+  fontWeight: 800,
+  fontFamily: 'var(--font-head)',
+  letterSpacing: '0.4px',
+  textTransform: 'uppercase',
+  color: '#475569',
+  display: 'block',
+  marginBottom: '0.4rem'
+};
+
 export const ConfigModal: React.FC<ConfigModalProps> = ({ isOpen, onClose }) => {
   const [url, setUrlInput] = useState(getBaseUrl());
   const [token, setTokenInput] = useState(getAuthToken());
@@ -31,9 +55,9 @@ export const ConfigModal: React.FC<ConfigModalProps> = ({ isOpen, onClose }) => 
     try {
       const res = await login(email, password);
       setTokenInput(res.token);
-      setLoginMsg('✅ Logged in successfully! Token updated.');
+      setLoginMsg('Logged in successfully. Token updated.');
     } catch (err: any) {
-      setLoginMsg(`❌ Login failed: ${err?.response?.data?.message || err.message}`);
+      setLoginMsg(`Login failed: ${err?.response?.data?.message || err.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -44,99 +68,65 @@ export const ConfigModal: React.FC<ConfigModalProps> = ({ isOpen, onClose }) => 
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(0, 0, 0, 0.8)',
-        backdropFilter: 'blur(8px)',
+        background: 'rgba(15, 23, 42, 0.6)',
+        backdropFilter: 'blur(6px)',
         zIndex: 2000,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         padding: '1rem'
       }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
       <div
         style={{
-          background: 'var(--bg-purple-card)',
-          border: '1px solid var(--border-gold)',
-          borderRadius: '12px',
+          background: '#ffffff',
+          borderRadius: '16px',
+          border: '1px solid #e2e8f0',
+          boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15)',
           width: '100%',
           maxWidth: '480px',
-          padding: '1.5rem',
-          boxShadow: '0 15px 35px rgba(0,0,0,0.8)'
+          padding: '1.8rem',
+          position: 'relative'
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.2rem' }}>
-          <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#fff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Server size={20} style={{ color: 'var(--accent-gold)' }} /> API & Socket Configuration
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.4rem' }}>
+          <h3 style={{ fontFamily: 'var(--font-head)', fontSize: '1.25rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.4px', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
+            <Server size={20} style={{ color: 'var(--pkl-orange)' }} /> API &amp; Socket Config
           </h3>
-          <button onClick={onClose} style={{ background: 'none', color: 'rgba(255,255,255,0.6)' }}>
+          <button onClick={onClose} style={{ color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '8px' }}>
             <X size={20} />
           </button>
         </div>
 
         <div style={{ marginBottom: '1.2rem' }}>
-          <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '0.4rem' }}>
-            Backend Base URL
-          </label>
-          <input
-            type="text"
-            value={url}
-            onChange={(e) => setUrlInput(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '0.6rem 0.8rem',
-              borderRadius: '6px',
-              border: '1px solid rgba(255,255,255,0.1)',
-              background: 'rgba(0,0,0,0.4)',
-              color: '#fff',
-              fontSize: '0.9rem'
-            }}
-          />
+          <label style={labelStyle}>Backend Base URL</label>
+          <input type="text" value={url} onChange={(e) => setUrlInput(e.target.value)} style={inputStyle} />
         </div>
 
         <div style={{ marginBottom: '1.2rem' }}>
-          <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '0.4rem' }}>
-            Bearer Token (Optional for REST APIs)
-          </label>
+          <label style={labelStyle}>Bearer Token (optional for REST APIs)</label>
           <input
             type="text"
             value={token}
             onChange={(e) => setTokenInput(e.target.value)}
             placeholder="Paste JWT token here..."
-            style={{
-              width: '100%',
-              padding: '0.6rem 0.8rem',
-              borderRadius: '6px',
-              border: '1px solid rgba(255,255,255,0.1)',
-              background: 'rgba(0,0,0,0.4)',
-              color: '#fff',
-              fontSize: '0.85rem',
-              fontFamily: 'monospace'
-            }}
+            style={{ ...inputStyle, fontFamily: 'var(--font-mono)', fontSize: '0.82rem' }}
           />
         </div>
 
-        <hr style={{ borderColor: 'rgba(255,255,255,0.1)', margin: '1.2rem 0' }} />
+        <hr style={{ border: 'none', borderTop: '1px solid #f1f5f9', margin: '1.3rem 0' }} />
 
-        <form onSubmit={handleLogin} style={{ marginBottom: '1.2rem' }}>
-          <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--accent-gold)', marginBottom: '0.6rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-            <LogIn size={16} /> Quick 1-Click Login
+        <form onSubmit={handleLogin} style={{ marginBottom: '1.3rem' }}>
+          <h4 style={{ fontFamily: 'var(--font-head)', fontSize: '0.95rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.4px', color: 'var(--pkl-orange)', marginBottom: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+            <LogIn size={16} /> Quick Login
           </h4>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.6rem' }}>
-            <input
-              type="text"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Email"
-              style={{ padding: '0.5rem', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: '#fff', fontSize: '0.85rem' }}
-            />
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Password"
-              style={{ padding: '0.5rem', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', color: '#fff', fontSize: '0.85rem' }}
-            />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem', marginBottom: '0.7rem' }}>
+            <input type="text" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" style={inputStyle} />
+            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" style={inputStyle} />
           </div>
 
           <button
@@ -144,39 +134,52 @@ export const ConfigModal: React.FC<ConfigModalProps> = ({ isOpen, onClose }) => 
             disabled={isLoading}
             style={{
               width: '100%',
-              padding: '0.5rem',
-              borderRadius: '4px',
-              background: 'var(--accent-gold)',
-              color: '#000',
+              padding: '0.65rem',
+              borderRadius: '8px',
+              background: 'var(--pkl-orange-light)',
+              color: 'var(--pkl-orange)',
+              border: '1px solid var(--pkl-orange)',
+              fontFamily: 'var(--font-head)',
               fontWeight: 800,
-              fontSize: '0.85rem'
+              fontSize: '0.88rem',
+              textTransform: 'uppercase',
+              letterSpacing: '0.4px',
+              cursor: 'pointer'
             }}
           >
             {isLoading ? 'Logging in...' : 'Sign In & Get Token'}
           </button>
 
-          {loginMsg && <div style={{ fontSize: '0.8rem', marginTop: '0.5rem', color: loginMsg.includes('❌') ? '#ff3366' : '#00e676' }}>{loginMsg}</div>}
+          {loginMsg && (
+            <div style={{ fontSize: '0.82rem', marginTop: '0.6rem', fontWeight: 600, color: loginMsg.startsWith('Login failed') ? 'var(--pkl-red)' : 'var(--pkl-green)' }}>
+              {loginMsg}
+            </div>
+          )}
         </form>
 
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <button
-            onClick={handleSave}
-            style={{
-              flex: 1,
-              padding: '0.7rem',
-              borderRadius: '6px',
-              background: 'linear-gradient(135deg, #ff6000, #ff0055)',
-              color: '#fff',
-              fontWeight: 800,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.4rem'
-            }}
-          >
-            <Check size={18} /> Save & Apply
-          </button>
-        </div>
+        <button
+          onClick={handleSave}
+          style={{
+            width: '100%',
+            padding: '0.8rem',
+            borderRadius: '10px',
+            background: 'var(--pkl-orange)',
+            color: '#ffffff',
+            fontFamily: 'var(--font-head)',
+            fontWeight: 800,
+            fontSize: '0.95rem',
+            textTransform: 'uppercase',
+            letterSpacing: '0.4px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.5rem',
+            boxShadow: '0 4px 12px rgba(255, 85, 0, 0.3)',
+            cursor: 'pointer'
+          }}
+        >
+          <Check size={18} /> Save &amp; Apply
+        </button>
       </div>
     </div>
   );
