@@ -5,7 +5,46 @@ interface SkyFireworksProps {
   durationMs?: number;
 }
 
-interface Particle {
+// True Pyrotechnic Metal-Salt Color Spectrum (as used in Stadium Celebrations)
+const PYRO_PALETTES = [
+  {
+    name: 'Brocade Crown (Gold Willow)',
+    primary: '#ffd700',
+    secondary: '#fff8db',
+    core: '#ffffff',
+    type: 'willow'
+  },
+  {
+    name: 'Electric Blue & Ruby Ring',
+    primary: '#00e5ff',
+    secondary: '#ff1744',
+    core: '#ffffff',
+    type: 'chrysanthemum'
+  },
+  {
+    name: 'Emerald & Gold Peony',
+    primary: '#00e676',
+    secondary: '#ffd600',
+    core: '#fff9c4',
+    type: 'peony'
+  },
+  {
+    name: 'Royal Purple & Saffron Palm',
+    primary: '#d500f9',
+    secondary: '#ff6d00',
+    core: '#ffffff',
+    type: 'palm'
+  },
+  {
+    name: 'Titanium Silver Sparkler & Cyan',
+    primary: '#ffffff',
+    secondary: '#00f0ff',
+    core: '#ffd700',
+    type: 'strobe'
+  }
+];
+
+interface Star {
   x: number;
   y: number;
   vx: number;
@@ -14,39 +53,29 @@ interface Particle {
   alpha: number;
   decay: number;
   size: number;
+  gravity: number;
+  drag: number;
   trail: { x: number; y: number }[];
+  maxTrail: number;
   flicker: boolean;
+  strobeSpeed?: number;
+  hasCrackle?: boolean;
 }
 
-interface Rocket {
+interface MortarShell {
   x: number;
   y: number;
   targetY: number;
   vx: number;
   vy: number;
-  color: string;
+  paletteIndex: number;
   trail: { x: number; y: number }[];
   exploded: boolean;
 }
 
-// Full Spectrum Bright Night Sky Fireworks Palette
-const BRIGHT_FIREWORK_COLORS = [
-  '#29d9e6d2', // Electric Cyan
-  '#e0177bff', // Neon Magenta / Hot Pink
-  '#ffd700', // Radiant Gold
-  '#1ee128ff', // Bright Emerald / Mint
-  '#7800e9ff', // Electric Purple
-  '#ff6a00ff', // Saffron Fire / Bright Orange
-  '#0673d2ff', // Neon Sky Blue
-  '#c80828ff', // Bright Coral / Ruby
-  '#ccc366ff', // Electric Yellow
-  '#7f05faff', // Bright Lavender
-  '#ffffff'  // Diamond White Sparkle
-];
-
 export const SkyFireworks: React.FC<SkyFireworksProps> = ({
   winnerSide = 'right',
-  durationMs = 5000
+  durationMs = 6000
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -68,200 +97,222 @@ export const SkyFireworks: React.FC<SkyFireworksProps> = ({
 
     window.addEventListener('resize', handleResize);
 
-    const particles: Particle[] = [];
-    const rockets: Rocket[] = [];
+    const stars: Star[] = [];
+    const mortars: MortarShell[] = [];
 
-    // Target directly above the winning team
-    const getTargetX = () => {
+    // Stadium Mortar target location above winning team area
+    const getTargetApex = () => {
+      let x = width * 0.5;
       if (winnerSide === 'left') {
-        return width * (0.16 + Math.random() * 0.18);
+        x = width * (0.15 + Math.random() * 0.22);
+      } else if (winnerSide === 'right') {
+        x = width * (0.63 + Math.random() * 0.22);
+      } else {
+        x = width * (0.35 + Math.random() * 0.3);
       }
-      if (winnerSide === 'right') {
-        return width * (0.66 + Math.random() * 0.18);
-      }
-      return width * (0.38 + Math.random() * 0.24);
+      const y = height * (0.10 + Math.random() * 0.24);
+      return { x, y };
     };
 
-    // Create vibrant multi-color explosion
-    const createExplosion = (x: number, y: number, primaryColor: string) => {
-      const particleCount = 55 + Math.floor(Math.random() * 25);
-      const secondaryColor = BRIGHT_FIREWORK_COLORS[Math.floor(Math.random() * BRIGHT_FIREWORK_COLORS.length)];
+    // Detonate Aerial Shell in Sky
+    const detonateShell = (x: number, y: number, paletteIndex: number) => {
+      const palette = PYRO_PALETTES[paletteIndex % PYRO_PALETTES.length];
+      const isWillow = palette.type === 'willow';
+      const isStrobe = palette.type === 'strobe';
+      const starCount = isWillow ? 75 : (isStrobe ? 60 : 70);
 
-      for (let i = 0; i < particleCount; i++) {
+      // 1. Central flash shockwave (Incandescent White Core)
+      for (let i = 0; i < 14; i++) {
         const angle = Math.random() * Math.PI * 2;
-        const speed = 1.6 + Math.random() * 3.6;
-        const pColor = Math.random() > 0.4 ? primaryColor : (Math.random() > 0.5 ? secondaryColor : '#ffffff');
-
-        particles.push({
+        const speed = 0.5 + Math.random() * 2.0;
+        stars.push({
           x,
           y,
           vx: Math.cos(angle) * speed,
           vy: Math.sin(angle) * speed,
-          color: pColor,
+          color: palette.core,
           alpha: 1,
-          decay: 0.011 + Math.random() * 0.015,
-          size: 1.5 + Math.random() * 1.8,
+          decay: 0.035, // short bright flash
+          size: 2.2,
+          gravity: 0.02,
+          drag: 0.94,
           trail: [],
-          flicker: Math.random() > 0.35
+          maxTrail: 3,
+          flicker: false
+        });
+      }
+
+      // 2. Spherical Star Pellet Explosion
+      for (let i = 0; i < starCount; i++) {
+        const angle = (i / starCount) * Math.PI * 2 + (Math.random() * 0.08 - 0.04);
+        const baseSpeed = isWillow ? (2.2 + Math.random() * 3.4) : (2.8 + Math.random() * 3.6);
+        const color = Math.random() > 0.4 ? palette.primary : (Math.random() > 0.5 ? palette.secondary : palette.core);
+
+        stars.push({
+          x,
+          y,
+          vx: Math.cos(angle) * baseSpeed,
+          vy: Math.sin(angle) * baseSpeed,
+          color,
+          alpha: 1,
+          decay: isWillow ? 0.009 : 0.013, // willow hangs longer in the sky
+          size: isWillow ? 1.8 : 2.0,
+          gravity: isWillow ? 0.065 : 0.05, // gravitational waterfall curve
+          drag: isWillow ? 0.978 : 0.965, // atmospheric deceleration
+          trail: [],
+          maxTrail: isWillow ? 7 : 5,
+          flicker: Math.random() > 0.35,
+          strobeSpeed: isStrobe ? (0.2 + Math.random() * 0.3) : undefined,
+          hasCrackle: Math.random() > 0.7
         });
       }
     };
 
-    // Launch sky rocket in diverse bright colors
-    const launchRocket = () => {
-      const startX = getTargetX() + (Math.random() * 50 - 25);
-      const targetY = height * (0.10 + Math.random() * 0.22);
-      const color = BRIGHT_FIREWORK_COLORS[Math.floor(Math.random() * (BRIGHT_FIREWORK_COLORS.length - 1))];
+    // Launch Mortar from Stadium Floor
+    const launchMortar = () => {
+      const target = getTargetApex();
+      const paletteIndex = Math.floor(Math.random() * PYRO_PALETTES.length);
+      const startX = target.x + (Math.random() * 40 - 20);
 
-      rockets.push({
+      const distY = height - target.y;
+      const initialVy = -Math.sqrt(2 * 0.12 * distY); // physics flight to apex
+
+      mortars.push({
         x: startX,
         y: height,
-        targetY,
-        vx: (Math.random() - 0.5) * 1.2,
-        vy: -(5.5 + Math.random() * 2.8),
-        color: color || '#00f0ff',
+        targetY: target.y,
+        vx: (target.x - startX) / (Math.abs(initialVy) / 0.12),
+        vy: initialVy,
+        paletteIndex,
         trail: [],
         exploded: false
       });
     };
 
-    // Initial rapid volley of 3 rockets
-    launchRocket();
-    setTimeout(launchRocket, 140);
-    setTimeout(launchRocket, 320);
+    // Initial rapid stadium salvo (3 shells)
+    launchMortar();
+    setTimeout(launchMortar, 130);
+    setTimeout(launchMortar, 290);
 
-    // Recurring sky launches
+    // Continuous championship celebration show
     const startTime = Date.now();
     const interval = setInterval(() => {
       if (Date.now() - startTime < durationMs) {
-        launchRocket();
-        if (Math.random() > 0.45) {
-          setTimeout(launchRocket, 160);
+        launchMortar();
+        if (Math.random() > 0.4) {
+          setTimeout(launchMortar, 150);
         }
       } else {
         clearInterval(interval);
       }
     }, 420);
 
-    // Ultra-smooth 60fps night-time shining animation loop
+    // 60FPS Stadium Rendering Loop
     const loop = () => {
       ctx.clearRect(0, 0, width, height);
 
-      // Additive hardware blending for luminous night-time glow
+      // Additive hardware blending for luminous night sky emission
       ctx.globalCompositeOperation = 'lighter';
 
-      // 1. Update & Draw Rockets
-      for (let i = rockets.length - 1; i >= 0; i--) {
-        const r = rockets[i];
-        r.x += r.vx;
-        r.y += r.vy;
-        r.vy += 0.06;
+      // 1. Draw Rising Mortar Shells
+      for (let i = mortars.length - 1; i >= 0; i--) {
+        const m = mortars[i];
+        m.x += m.vx;
+        m.y += m.vy;
+        m.vy += 0.12; // ascent gravity deceleration
 
-        r.trail.push({ x: r.x, y: r.y });
-        if (r.trail.length > 6) r.trail.shift();
+        m.trail.push({ x: m.x, y: m.y });
+        if (m.trail.length > 6) m.trail.shift();
 
-        // Draw shining luminous trail behind rising rocket
+        // Glowing comet spark trail
         ctx.beginPath();
-        for (let t = 0; t < r.trail.length; t++) {
-          const pt = r.trail[t];
+        for (let t = 0; t < m.trail.length; t++) {
+          const pt = m.trail[t];
           if (t === 0) ctx.moveTo(pt.x, pt.y);
           else ctx.lineTo(pt.x, pt.y);
         }
-        ctx.strokeStyle = r.color;
+        ctx.strokeStyle = '#ffb703';
         ctx.lineWidth = 2.5;
         ctx.stroke();
 
-        // Rising sparkling beads along tail
-        for (let t = 0; t < r.trail.length; t++) {
-          const pt = r.trail[t];
-          ctx.beginPath();
-          ctx.arc(pt.x, pt.y, 1.2, 0, Math.PI * 2);
-          ctx.fillStyle = '#fff8db';
-          ctx.fill();
-        }
-
-        // Rocket white-hot shining head
+        // Shell incandescent head
         ctx.beginPath();
-        ctx.arc(r.x, r.y, 3, 0, Math.PI * 2);
+        ctx.arc(m.x, m.y, 2.5, 0, Math.PI * 2);
         ctx.fillStyle = '#ffffff';
         ctx.fill();
 
-        // Check if rocket reached altitude or slowed down
-        if (r.y <= r.targetY || r.vy >= -0.5) {
-          createExplosion(r.x, r.y, r.color);
-          rockets.splice(i, 1);
+        // Apex Detonation
+        if (m.y <= m.targetY || m.vy >= -0.8) {
+          detonateShell(m.x, m.y, m.paletteIndex);
+          mortars.splice(i, 1);
         }
       }
 
-      // 2. Update & Draw Explosion Particles
-      for (let i = particles.length - 1; i >= 0; i--) {
-        const p = particles[i];
-        p.x += p.vx;
-        p.y += p.vy;
-        p.vy += 0.065;
-        p.vx *= 0.982;
-        p.vy *= 0.982;
-        p.alpha -= p.decay;
+      // 2. Draw Detonated Star Pellets & Radiant Trails
+      for (let i = stars.length - 1; i >= 0; i--) {
+        const s = stars[i];
+        s.x += s.vx;
+        s.y += s.vy;
+        s.vx *= s.drag;
+        s.vy *= s.drag;
+        s.vy += s.gravity; // natural gravity curve
+        s.alpha -= s.decay;
 
-        p.trail.push({ x: p.x, y: p.y });
-        if (p.trail.length > 5) p.trail.shift();
+        s.trail.push({ x: s.x, y: s.y });
+        if (s.trail.length > s.maxTrail) s.trail.shift();
 
-        if (p.alpha <= 0) {
-          particles.splice(i, 1);
+        if (s.alpha <= 0) {
+          stars.splice(i, 1);
           continue;
         }
 
-        const currentAlpha = Math.max(0, p.alpha * (p.flicker ? 0.7 + Math.random() * 0.3 : 1));
+        const flickerMultiplier = s.flicker ? (0.75 + Math.sin(Date.now() * 0.02) * 0.25) : 1;
+        const currentAlpha = Math.max(0, s.alpha * flickerMultiplier);
 
-        // Draw Shining Spark Trail (golden ray)
-        if (p.trail.length > 1) {
+        // Draw Streamer / Spark Trail
+        if (s.trail.length > 1) {
           ctx.save();
-          ctx.globalAlpha = currentAlpha;
+          ctx.globalAlpha = currentAlpha * 0.85;
           ctx.beginPath();
-          ctx.moveTo(p.trail[0].x, p.trail[0].y);
-          for (let t = 1; t < p.trail.length; t++) {
-            ctx.lineTo(p.trail[t].x, p.trail[t].y);
+          ctx.moveTo(s.trail[0].x, s.trail[0].y);
+          for (let t = 1; t < s.trail.length; t++) {
+            ctx.lineTo(s.trail[t].x, s.trail[t].y);
           }
-          ctx.strokeStyle = p.color;
-          ctx.lineWidth = p.size;
+          ctx.strokeStyle = s.color;
+          ctx.lineWidth = s.size;
           ctx.lineCap = 'round';
           ctx.stroke();
           ctx.restore();
         }
 
-        // Draw Shining Incandescent Spark Head (White-hot core + Colorful radiant aura)
+        // Draw Glowing Star Head (Incandescent Core + Vivid Outer Halo)
         ctx.save();
         ctx.globalAlpha = currentAlpha;
 
-        // Outer radiant color halo
+        // Outer radiant pyrotechnic color aura
         ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size * 1.3, 0, Math.PI * 2);
-        ctx.fillStyle = p.color;
+        ctx.arc(s.x, s.y, s.size * 1.3, 0, Math.PI * 2);
+        ctx.fillStyle = s.color;
         ctx.fill();
 
-        // Inner white-hot glowing core (makes it shine in the dark!)
+        // Inner white-hot magnesium/titanium core (night luminescence)
         ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size * 0.6, 0, Math.PI * 2);
+        ctx.arc(s.x, s.y, s.size * 0.55, 0, Math.PI * 2);
         ctx.fillStyle = '#ffffff';
         ctx.fill();
 
-        // Diamond 4-point sparkle glint for shining twinkling stars
-        if (p.flicker && p.alpha > 0.45) {
-          const glintSize = p.size * 2.2;
+        // Stadium Crackling Micro-Sparks
+        if (s.hasCrackle && s.alpha < 0.6 && Math.random() > 0.5) {
+          const crackleOffset = (Math.random() - 0.5) * 6;
           ctx.beginPath();
-          ctx.moveTo(p.x - glintSize, p.y);
-          ctx.lineTo(p.x + glintSize, p.y);
-          ctx.moveTo(p.x, p.y - glintSize);
-          ctx.lineTo(p.x, p.y + glintSize);
-          ctx.strokeStyle = '#ffffff';
-          ctx.lineWidth = 1;
-          ctx.stroke();
+          ctx.arc(s.x + crackleOffset, s.y + crackleOffset, 1, 0, Math.PI * 2);
+          ctx.fillStyle = '#fff8db';
+          ctx.fill();
         }
 
         ctx.restore();
       }
 
-      // Reset composite operation
       ctx.globalCompositeOperation = 'source-over';
 
       animationFrameId = requestAnimationFrame(loop);
