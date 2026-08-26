@@ -13,15 +13,15 @@ export const PKLMatchScoreboard: React.FC<PKLMatchScoreboardProps> = ({
   matchData,
   onBack
 }) => {
-  const matchNumber = matchSummary?.match_number || matchSummary?.id || matchData?.match_id || 1;
+  const matchNumber = matchSummary?.match_number || matchSummary?.id || matchData?.match_id || 20;
   const venue = matchSummary?.venue_name || 'Kanteerva Indoor Stadium';
   const rawPhase = matchData?.game_phase || matchSummary?.session?.game_phase || matchSummary?.status || 'second_half';
 
   const teamAName = matchData?.team_a?.team_name || matchSummary?.team_a_placeholder || 'Delhi Capitals';
-  const teamBName = matchData?.team_b?.team_name || matchSummary?.team_b_placeholder || 'New Zealand National';
+  const teamBName = matchData?.team_b?.team_name || matchSummary?.team_b_placeholder || 'New Zealand National Team';
 
-  const teamAScore = matchData?.team_a?.score ?? matchSummary?.final_team_a_score ?? matchSummary?.session?.total_team_a_score ?? 35;
-  const teamBScore = matchData?.team_b?.score ?? matchSummary?.final_team_b_score ?? matchSummary?.session?.total_team_b_score ?? 27;
+  const teamAScore = matchData?.team_a?.score ?? matchSummary?.final_team_a_score ?? matchSummary?.session?.total_team_a_score ?? 46;
+  const teamBScore = matchData?.team_b?.score ?? matchSummary?.final_team_b_score ?? matchSummary?.session?.total_team_b_score ?? 37;
 
   const fiveRaidsA = matchData?.team_a?.five_raids_score ?? matchSummary?.session?.five_raids_team_a_score ?? 0;
   const fiveRaidsB = matchData?.team_b?.five_raids_score ?? matchSummary?.session?.five_raids_team_b_score ?? 0;
@@ -37,6 +37,9 @@ export const PKLMatchScoreboard: React.FC<PKLMatchScoreboardProps> = ({
   const isTeamARaiding = raidingTeamId ? Number(raidingTeamId) === Number(teamAId) : false;
   const isTeamBRaiding = raidingTeamId ? Number(raidingTeamId) !== Number(teamAId) : true;
 
+  // Selected raider display name
+  const selectedRaiderName = matchData?.selected_raider_name || matchData?.last_raid?.raider_name || 'Marco Jansen';
+
   // Format Phase Label
   const formatPhaseLabel = (phase: string) => {
     const p = phase.toLowerCase();
@@ -48,27 +51,6 @@ export const PKLMatchScoreboard: React.FC<PKLMatchScoreboardProps> = ({
     if (p === 'golden_raid') return 'GOLDEN RAID';
     return `● ${phase.replace('_', ' ').toUpperCase()}`;
   };
-
-  let summaryText = matchData?.update_message || '';
-  if (!summaryText || summaryText.includes('undefined')) {
-    if (rawPhase === 'five_raids' || fiveRaidsA > 0 || fiveRaidsB > 0) {
-      const winner = fiveRaidsA > fiveRaidsB ? teamAName : (fiveRaidsB > fiveRaidsA ? teamBName : 'Tied');
-      summaryText = `${teamAName} tied with ${teamBName} (${teamAScore}-${teamBScore}) (${winner} wins Five Raids ${fiveRaidsA > fiveRaidsB ? `${fiveRaidsA}-${fiveRaidsB}` : `${fiveRaidsB}-${fiveRaidsA}`})`;
-    } else if (matchData?.last_raid) {
-      const lr = matchData.last_raid;
-      summaryText = `${lr.raider_name || 'Raider'} scored ${lr.points_scored} Pt. in last Raid.`;
-    } else if (isCompleted) {
-      if (teamAScore === teamBScore) {
-        summaryText = `Match Tied (${teamAScore}-${teamBScore})`;
-      } else {
-        const winner = teamAScore > teamBScore ? teamAName : teamBName;
-        const diff = Math.abs(teamAScore - teamBScore);
-        summaryText = `${winner} won by ${diff} points (${teamAScore}-${teamBScore})`;
-      }
-    } else {
-      summaryText = `${isTeamARaiding ? teamAName : teamBName} scores 1Pt. in last Raid.`;
-    }
-  }
 
   return (
     <div>
@@ -125,14 +107,34 @@ export const PKLMatchScoreboard: React.FC<PKLMatchScoreboardProps> = ({
                 {fiveRaidsA > 0 && <span className="sub-score">5R: {fiveRaidsA}</span>}
               </div>
 
-              {(rawPhase === 'five_raids' || fiveRaidsA > 0 || fiveRaidsB > 0) ? (
-                <div className="tiebreaker-badge">
-                  <span className="tb-label">5R</span>
-                  <span className="tb-value">Tiebreak</span>
-                </div>
-              ) : (
+              <div className="score-divider-container">
                 <span className="score-divider">:</span>
-              )}
+                <div className="score-center-meta">
+                  {!isCompleted && (
+                    <span className="score-live-badge">
+                      <span className="rec-dot" style={{ background: 'var(--pkl-red)', width: '5px', height: '5px' }} />
+                      LIVE
+                    </span>
+                  )}
+                  <span className="score-phase-text">
+                    {rawPhase === 'second_half'
+                      ? '2ND HALF'
+                      : rawPhase === 'first_half'
+                      ? '1ST HALF'
+                      : rawPhase === 'extra_time_first_half'
+                      ? 'EXTRA TIME 1ST HALF'
+                      : rawPhase === 'extra_time_second_half'
+                      ? 'EXTRA TIME 2ND HALF'
+                      : rawPhase.replace(/_/g, ' ').toUpperCase()}
+                  </span>
+                  {/* Dynamic Match Clock if provided by backend */}
+                  {(matchData as any)?.clock || (matchData as any)?.remaining_time || (matchData as any)?.match_time ? (
+                    <span className="score-clock-text">
+                      {(matchData as any)?.clock || (matchData as any)?.remaining_time || (matchData as any)?.match_time}
+                    </span>
+                  ) : null}
+                </div>
+              </div>
 
               <div className="score-box">
                 <span className="score-number">{teamBScore}</span>
@@ -165,9 +167,12 @@ export const PKLMatchScoreboard: React.FC<PKLMatchScoreboardProps> = ({
             </div>
           </div>
 
-          {/* Accent Box / Event summary callout */}
-          <div className="match-summary-banner">
-            <span>{summaryText}</span>
+          {/* Centered Raider Selected Banner */}
+          <div className="match-summary-banner centered">
+            <div className="raider-selected-banner">
+              <span className="raider-selected-label">RAIDER SELECTED:</span>
+              <span className="raider-selected-name">{selectedRaiderName.toUpperCase()}</span>
+            </div>
           </div>
         </div>
       </div>

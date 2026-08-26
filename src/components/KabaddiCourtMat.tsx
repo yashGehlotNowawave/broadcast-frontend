@@ -43,8 +43,8 @@ export const KabaddiCourtMat: React.FC<KabaddiCourtMatProps> = ({ matchData }) =
     ? allPlayers.find((p: any) => Number(p.id || p.player_id) === Number(selectedRaiderId))
     : null;
 
-  const raiderJerseyNo = raiderPlayer?.jersey_no || '600';
-  const raiderDisplayName = raiderPlayer?.full_name || raiderPlayer?.name || matchData?.selected_raider_name || matchData?.last_raid?.raider_name || 'Rashid Khan';
+  const raiderJerseyNo = raiderPlayer?.jersey_no || '288';
+  const raiderDisplayName = raiderPlayer?.full_name || raiderPlayer?.name || matchData?.selected_raider_name || matchData?.last_raid?.raider_name || 'Marco Jansen';
 
   const isDoOrDie = matchData?.is_do_or_die_raid || matchData?.last_raid?.is_do_or_die;
 

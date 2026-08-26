@@ -42,18 +42,19 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               className={`nav-link ${activeView === 'matches' || activeView === 'match_detail' ? 'active' : ''}`}
               onClick={() => onNavigate('matches')}
+              title={selectedTournamentName}
             >
-              {selectedTournamentName}
+              <span className="nav-link-truncate">{selectedTournamentName}</span>
             </button>
           )}
 
-          <div className="status-indicator">
+          <div className="status-indicator" title={isConnected ? 'Socket Live' : 'Socket Offline'}>
             <div className={`status-dot ${isConnected ? 'connected' : 'disconnected'}`} />
-            <span>{isConnected ? 'Socket Live' : 'Socket Offline'}</span>
+            <span>{isConnected ? 'Socket Live' : 'Offline'}</span>
           </div>
 
           <button className="icon-button" onClick={onOpenConfig} title="API & Auth Config" aria-label="Settings">
-            <Settings size={17} />
+            <Settings size={16} />
           </button>
         </nav>
       </div>
