@@ -62,6 +62,9 @@ export const initSocket = (): Socket => {
   // Attach generic wildcard event logger for incoming events
   const broadcastEvents = [
     'RAID_RECORDED',
+    'RAID_EDITED',
+    'MATCH_STATUS_UPDATED',
+    'GAME_PHASE_CHANGED',
     'RAIDER_SELECTED',
     'raider_selected',
     'MATCH_SESSION_UPDATED',

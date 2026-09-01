@@ -135,3 +135,174 @@ export interface SocketLog {
   payload: any;
   direction: 'in' | 'out';
 }
+
+// --------------------------------------------------------------------------
+// Detailed Statistics Interfaces for Live Broadcasting Pilot
+// --------------------------------------------------------------------------
+
+export interface PlayerStats {
+  player_id: number;
+  player_name: string;
+  jersey_no: number | null;
+  position: string | null;
+  image_url: string | null;
+  team_id: number;
+  team_name: string;
+  team_logo: string | null;
+  raids: number;
+  successful_raids: number;
+  unsuccessful_raids: number;
+  empty_raids: number;
+  touch_points: number;
+  bonus_points: number;
+  total_raid_points: number;
+  total_tackles: number;
+  successful_tackles: number;
+  unsuccessful_tackles: number;
+  tackle_points: number;
+  super_tackles: number;
+  total_points: number;
+  super_raids?: number;
+  super_ten?: boolean;
+  high_five?: boolean;
+  matches_played?: number;
+  super_tens_count?: number;
+  high_fives_count?: number;
+  green_cards?: number;
+  yellow_cards?: number;
+  red_cards?: number;
+}
+
+export interface TeamMatchStats {
+  team_id: number;
+  team_name: string;
+  team_logo: string | null;
+  number_of_raids: number;
+  number_of_tackles: number;
+  raid_points: number;
+  tackle_points: number;
+  extras: number;
+  touch_points: number;
+  bonus_points: number;
+  successful_raids: number;
+  unsuccessful_raids: number;
+  empty_raids: number;
+  super_raids: number;
+  successful_tackles: number;
+  unsuccessful_tackles: number;
+  super_tackles: number;
+  all_out_points: number;
+  total_score: number;
+}
+
+export interface TopRaider {
+  rank: number;
+  player_id: number;
+  player_name: string;
+  jersey_no: number | null;
+  position?: string | null;
+  image_url: string | null;
+  team_id: number;
+  team_name: string;
+  team_logo: string | null;
+  matches_played?: number;
+  raids: number;
+  successful_raids: number;
+  unsuccessful_raids: number;
+  empty_raids?: number;
+  touch_points: number;
+  bonus_points: number;
+  total_raid_points: number;
+  super_raids: number;
+  super_tens: number;
+}
+
+export interface TopDefender {
+  rank: number;
+  player_id: number;
+  player_name: string;
+  jersey_no: number | null;
+  position?: string | null;
+  image_url: string | null;
+  team_id: number;
+  team_name: string;
+  team_logo: string | null;
+  matches_played?: number;
+  total_tackles: number;
+  successful_tackles: number;
+  unsuccessful_tackles: number;
+  tackle_points: number;
+  super_tackles: number;
+  high_fives: number;
+}
+
+export interface TopPerformersData {
+  top_raiders: TopRaider[];
+  top_defenders: TopDefender[];
+}
+
+export interface MatchStatsData {
+  match_id: number;
+  external_fixture_id: number | null;
+  tournament_id: number;
+  match_number: number | null;
+  status: string;
+  game_phase: string;
+  scheduled_at: string | null;
+  venue_name: string | null;
+  team_stats: {
+    team_a: TeamMatchStats;
+    team_b: TeamMatchStats;
+  };
+  player_stats: PlayerStats[];
+  top_performers: TopPerformersData;
+}
+
+export interface TournamentTeamStats {
+  team_id: number;
+  team_name: string;
+  team_logo: string | null;
+  matches_played: number;
+  number_of_raids: number;
+  number_of_tackles: number;
+  raid_points: number;
+  tackle_points: number;
+  extras: number;
+  successful_raids: number;
+  unsuccessful_raids: number;
+  empty_raids: number;
+  successful_tackles: number;
+  unsuccessful_tackles: number;
+  super_tackles: number;
+  super_raids: number;
+  all_out_points: number;
+  total_points: number;
+}
+
+export interface TournamentStatsData {
+  tournament_id: number;
+  external_tournament_id: number | null;
+  tournament_name: string;
+  status: string;
+  tournament_stats: {
+    total_raids: number;
+    total_tackles: number;
+    total_raid_points: number;
+    total_tackle_points: number;
+    total_matches: number;
+    total_points: number;
+    total_successful_raids: number;
+    total_unsuccessful_raids: number;
+    total_empty_raids: number;
+    total_touch_points: number;
+    total_bonus_points: number;
+    total_successful_tackles: number;
+    total_unsuccessful_tackles: number;
+    total_super_tackles: number;
+    total_super_raids: number;
+    total_all_out_points: number;
+    total_extras: number;
+  };
+  team_stats: TournamentTeamStats[];
+  top_performers: TopPerformersData;
+}

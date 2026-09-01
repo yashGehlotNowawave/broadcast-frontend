@@ -19,6 +19,8 @@ import { KabaddiCourtMat } from './components/KabaddiCourtMat';
 import { LiveTicker } from './components/LiveTicker';
 import { SocketInspector } from './components/SocketInspector';
 import { ConfigModal } from './components/ConfigModal';
+import { MatchStatsPanel } from './components/MatchStatsPanel';
+import { TournamentStatsPanel } from './components/TournamentStatsPanel';
 
 export const App: React.FC = () => {
   const [activeView, setActiveView] = useState<'tournaments' | 'matches' | 'match_detail'>('tournaments');
@@ -32,6 +34,7 @@ export const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [isConfigOpen, setIsConfigOpen] = useState<boolean>(false);
+  const [tournamentViewMode, setTournamentViewMode] = useState<'matches' | 'stats'>('matches');
 
   // Helper to synchronize URL query parameters without reloading
   const updateUrl = (tourId?: number | string | null, matchId?: number | string | null) => {
@@ -166,7 +169,8 @@ export const App: React.FC = () => {
             console.error(`Failed to load match status for ${urlMatchId}:`, err);
           }
         } else {
-          setActiveView('matches');
+          setTournamentViewMode('matches');
+    setActiveView('matches');
         }
       } else {
         setActiveView('tournaments');
@@ -291,13 +295,37 @@ export const App: React.FC = () => {
         )}
 
         {activeView === 'matches' && selectedTournament && (
-          <MatchList
-            tournamentName={selectedTournament.name}
-            matches={matches}
-            onSelectMatch={handleSelectMatch}
-            isLoading={isLoading}
-            onBack={() => handleNavigate('tournaments')}
-          />
+          <div>
+            <div className="tour-view-switcher">
+              <button
+                className={'tour-view-btn ' + (tournamentViewMode === 'matches' ? 'active' : '')}
+                onClick={() => setTournamentViewMode('matches')}
+              >
+                Matches ({matches.length})
+              </button>
+              <button
+                className={'tour-view-btn ' + (tournamentViewMode === 'stats' ? 'active' : '')}
+                onClick={() => setTournamentViewMode('stats')}
+              >
+                Tournament Statistics & Leaders
+              </button>
+            </div>
+
+            {tournamentViewMode === 'matches' ? (
+              <MatchList
+                tournamentName={selectedTournament.name}
+                matches={matches}
+                onSelectMatch={handleSelectMatch}
+                isLoading={isLoading}
+                onBack={() => handleNavigate('tournaments')}
+              />
+            ) : (
+              <TournamentStatsPanel
+                tournamentId={selectedTournament.id}
+                tournamentName={selectedTournament.name}
+              />
+            )}
+          </div>
         )}
 
         {activeView === 'match_detail' && (
@@ -314,6 +342,13 @@ export const App: React.FC = () => {
             />
 
             <KabaddiCourtMat matchData={matchData} />
+
+            {/* Live Match & Player Statistics Suite */}
+            {selectedMatch && (
+              <MatchStatsPanel
+                matchId={selectedMatch.id || selectedMatch.external_fixture_id || ''}
+              />
+            )}
           </div>
         )}
       </main>

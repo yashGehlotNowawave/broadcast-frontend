@@ -97,16 +97,21 @@ export const MatchList: React.FC<MatchListProps> = ({
                   </div>
 
                   <div className="match-card-score-row">
-                    <div className={`match-card-team ${isWinnerA ? 'winner' : ''} ${isWinnerB ? 'loser' : ''}`}>
-                      <div className="match-card-team-name">{m.team_a_placeholder || 'Team A'}</div>
-                      <div className="match-card-team-score">{teamAScore}</div>
+                    <div className={`match-card-team-name team-a ${isWinnerA ? 'winner' : ''} ${isWinnerB ? 'loser' : ''}`}>
+                      {m.team_a_placeholder || 'Team A'}
+                    </div>
+                    <div className={`match-card-team-name team-b ${isWinnerB ? 'winner' : ''} ${isWinnerA ? 'loser' : ''}`}>
+                      {m.team_b_placeholder || 'Team B'}
+                    </div>
+
+                    <div className={`match-card-team-score team-a ${isWinnerA ? 'winner' : ''} ${isWinnerB ? 'loser' : ''}`}>
+                      {teamAScore}
                     </div>
 
                     <div className="match-card-vs">vs</div>
 
-                    <div className={`match-card-team ${isWinnerB ? 'winner' : ''} ${isWinnerA ? 'loser' : ''}`}>
-                      <div className="match-card-team-name">{m.team_b_placeholder || 'Team B'}</div>
-                      <div className="match-card-team-score">{teamBScore}</div>
+                    <div className={`match-card-team-score team-b ${isWinnerB ? 'winner' : ''} ${isWinnerA ? 'loser' : ''}`}>
+                      {teamBScore}
                     </div>
                   </div>
 
