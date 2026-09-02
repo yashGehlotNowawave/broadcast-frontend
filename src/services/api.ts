@@ -9,7 +9,8 @@ import type {
   TournamentStatsData
 } from '../types';
 
-const defaultBackendUrl = import.meta.env.VITE_BACKEND_URL || 'https://9dq3jmc0-4000.inc1.devtunnels.ms/';
+//https://scoring-tool-backend-974618494728.asia-south1.run.app
+const defaultBackendUrl = import.meta.env.VITE_BACKEND_URL || 'https://scoring-tool-backend-974618494728.asia-south1.run.app';
 const savedUrl = localStorage.getItem('backend_base_url');
 let BASE_URL = savedUrl || defaultBackendUrl;
 
