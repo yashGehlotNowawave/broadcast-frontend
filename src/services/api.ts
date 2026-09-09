@@ -38,16 +38,40 @@ const getClient = () => {
   });
 };
 
+const filterActiveTournaments = (list: any[]): Tournament[] => {
+  if (!Array.isArray(list)) return [];
+  return list.filter((t: any) => {
+    // Exclude if explicitly marked inactive
+    if (t.is_active === false || t.is_active === 0 || t.is_active === 'false' || t.is_active === '0') {
+      return false;
+    }
+    // Exclude if soft-deleted
+    if (t.is_deleted === true || t.is_deleted === 1 || t.is_deleted === 'true' || t.is_deleted === '1') {
+      return false;
+    }
+    // Exclude if status is deleted, inactive, or archived
+    if (typeof t.status === 'string') {
+      const lower = t.status.trim().toLowerCase();
+      if (lower === 'deleted' || lower === 'inactive' || lower === 'archived') {
+        return false;
+      }
+    }
+    return true;
+  });
+};
+
 export const fetchTournaments = async (): Promise<Tournament[]> => {
   const client = getClient();
   try {
     const res = await client.get('/api/public/tournaments');
-    return res.data?.data || [];
+    const rawList = res.data?.data ?? res.data?.result ?? (Array.isArray(res.data) ? res.data : []);
+    return filterActiveTournaments(rawList);
   } catch (err) {
     console.warn('Public tournaments endpoint failed, trying scorer endpoint...', err);
     try {
       const res = await client.get('/api/scorer/tournaments');
-      return res.data?.data || [];
+      const rawList = res.data?.data ?? res.data?.result ?? (Array.isArray(res.data) ? res.data : []);
+      return filterActiveTournaments(rawList);
     } catch (fallbackErr) {
       console.error('Error fetching tournaments:', fallbackErr);
       throw fallbackErr;
@@ -59,12 +83,14 @@ export const fetchMatches = async (tournamentId: number | string): Promise<Match
   const client = getClient();
   try {
     const res = await client.get(`/api/public/tournaments/${tournamentId}/matches`);
-    return res.data?.data || [];
+    const rawList = res.data?.data ?? res.data?.result ?? (Array.isArray(res.data) ? res.data : []);
+    return Array.isArray(rawList) ? rawList : [];
   } catch (err) {
     console.warn(`Public matches endpoint failed for tournament ${tournamentId}, trying scorer endpoint...`, err);
     try {
       const res = await client.get(`/api/scorer/tournaments/${tournamentId}/matches`);
-      return res.data?.data || [];
+      const rawList = res.data?.data ?? res.data?.result ?? (Array.isArray(res.data) ? res.data : []);
+      return Array.isArray(rawList) ? rawList : [];
     } catch (fallbackErr) {
       console.error(`Error fetching matches for tournament ${tournamentId}:`, fallbackErr);
       throw fallbackErr;
