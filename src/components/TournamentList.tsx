@@ -36,7 +36,7 @@ export const TournamentList: React.FC<TournamentListProps> = ({
     <div>
       <div style={{ marginBottom: '1.2rem', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <h1 className="page-heading">Pro Kabaddi Tournaments</h1>
+          <h1 className="page-heading">Event Grid</h1>
           <p className="page-subtext">Select a tournament to view live match scoreboards</p>
         </div>
         <span className="count-chip">{tournaments.length} TOURNAMENTS</span>
