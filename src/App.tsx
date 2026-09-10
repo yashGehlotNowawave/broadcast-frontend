@@ -21,6 +21,7 @@ import { SocketInspector } from './components/SocketInspector';
 import { ConfigModal } from './components/ConfigModal';
 import { MatchStatsPanel } from './components/MatchStatsPanel';
 import { TournamentStatsPanel } from './components/TournamentStatsPanel';
+import { PlayByPlayPanel } from './components/PlayByPlayPanel';
 
 export const App: React.FC = () => {
   const [activeView, setActiveView] = useState<'tournaments' | 'matches' | 'match_detail'>('tournaments');
@@ -35,9 +36,14 @@ export const App: React.FC = () => {
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [isConfigOpen, setIsConfigOpen] = useState<boolean>(false);
   const [tournamentViewMode, setTournamentViewMode] = useState<'matches' | 'stats'>('matches');
+  const [matchTab, setMatchTab] = useState<'court' | 'play_by_play' | 'stats'>('court');
 
   // Helper to synchronize URL query parameters without reloading
-  const updateUrl = (tourId?: number | string | null, matchId?: number | string | null) => {
+  const updateUrl = (
+    tourId?: number | string | null,
+    matchId?: number | string | null,
+    tab?: string | null
+  ) => {
     const url = new URL(window.location.href);
     if (tourId) {
       url.searchParams.set('tournament', String(tourId));
@@ -49,7 +55,21 @@ export const App: React.FC = () => {
     } else {
       url.searchParams.delete('match');
     }
+    if (tab && tab !== 'court') {
+      url.searchParams.set('tab', tab);
+    } else {
+      url.searchParams.delete('tab');
+    }
     window.history.pushState({}, '', url.pathname + url.search);
+  };
+
+  const handleTabChange = (tab: 'court' | 'play_by_play' | 'stats') => {
+    setMatchTab(tab);
+    updateUrl(
+      selectedTournament?.id || selectedMatch?.tournament_id,
+      selectedMatch?.id || selectedMatch?.external_fixture_id,
+      tab
+    );
   };
 
   // 1. Initialize WebSocket connection on mount & subscribe to status
@@ -125,6 +145,10 @@ export const App: React.FC = () => {
       const params = new URLSearchParams(window.location.search);
       const urlTournamentId = params.get('tournament');
       const urlMatchId = params.get('match');
+      const urlTab = params.get('tab') as 'court' | 'play_by_play' | 'stats' | null;
+      if (urlTab && ['court', 'play_by_play', 'stats'].includes(urlTab)) {
+        setMatchTab(urlTab);
+      }
 
       if (urlTournamentId) {
         const matchedTournament = allTournaments.find(
@@ -220,7 +244,7 @@ export const App: React.FC = () => {
     setSelectedMatch(m);
     setActiveView('match_detail');
     const matchId = m.id || m.external_fixture_id;
-    updateUrl(selectedTournament?.id || m.tournament_id, matchId);
+    updateUrl(selectedTournament?.id || m.tournament_id, matchId, matchTab);
     setIsLoading(true);
 
     if (matchId) {
@@ -265,12 +289,14 @@ export const App: React.FC = () => {
       setSelectedTournament(null);
       setSelectedMatch(null);
       setMatchData(null);
-      updateUrl(null, null);
+      setMatchTab('court');
+      updateUrl(null, null, null);
     } else if (view === 'matches' && selectedTournament) {
       if (selectedMatch) leaveMatchRoom(selectedMatch.id || selectedMatch.external_fixture_id || '');
       setSelectedMatch(null);
       setMatchData(null);
-      updateUrl(selectedTournament.id, null);
+      setMatchTab('court');
+      updateUrl(selectedTournament.id, null, null);
     }
     setActiveView(view);
   };
@@ -341,10 +367,42 @@ export const App: React.FC = () => {
               updateMessage={matchData?.update_message}
             />
 
-            <KabaddiCourtMat matchData={matchData} />
+            {/* Match Navigation Sub-Tabs */}
+            <div className="match-subnav-tabs">
+              <button
+                className={`match-subnav-tab ${matchTab === 'court' ? 'active' : ''}`}
+                onClick={() => handleTabChange('court')}
+              >
+                <span>🏟️ Court & Mat</span>
+              </button>
+              <button
+                className={`match-subnav-tab ${matchTab === 'play_by_play' ? 'active' : ''}`}
+                onClick={() => handleTabChange('play_by_play')}
+              >
+                <span>⚡ Play-by-Play Feed</span>
+              </button>
+              <button
+                className={`match-subnav-tab ${matchTab === 'stats' ? 'active' : ''}`}
+                onClick={() => handleTabChange('stats')}
+              >
+                <span>📊 Match Statistics</span>
+              </button>
+            </div>
 
-            {/* Live Match & Player Statistics Suite */}
-            {selectedMatch && (
+            {/* 1. Interactive 2D Court & Mat Roster */}
+            {matchTab === 'court' && (
+              <KabaddiCourtMat matchData={matchData} />
+            )}
+
+            {/* 2. Play-by-Play and Raid-by-Raid Timeline Feed */}
+            {matchTab === 'play_by_play' && selectedMatch && (
+              <PlayByPlayPanel
+                matchId={selectedMatch.id || selectedMatch.external_fixture_id || ''}
+              />
+            )}
+
+            {/* 3. Live Match & Player Statistics Suite */}
+            {matchTab === 'stats' && selectedMatch && (
               <MatchStatsPanel
                 matchId={selectedMatch.id || selectedMatch.external_fixture_id || ''}
               />

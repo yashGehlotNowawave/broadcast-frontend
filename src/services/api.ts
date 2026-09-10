@@ -6,11 +6,14 @@ import type {
   MatchStatsData,
   PlayerStats,
   TopPerformersData,
-  TournamentStatsData
+  TournamentStatsData,
+  PlayByPlayData
 } from '../types';
 
-//https://scoring-tool-backend-974618494728.asia-south1.run.app
-const defaultBackendUrl = import.meta.env.VITE_BACKEND_URL || 'https://services-kbdtracker.elev8sportz.com/';
+// 'https://scoring-tool-backend-974618494728.asia-south1.run.app'
+// 'https://services-kbdtracker.elev8sportz.com/';
+const defaultBackendUrl = import.meta.env.VITE_BACKEND_URL || 'https://9dq3jmc0-4000.inc1.devtunnels.ms/'
+
 const savedUrl = localStorage.getItem('backend_base_url');
 let BASE_URL = savedUrl || defaultBackendUrl;
 
@@ -152,6 +155,44 @@ export const fetchMatchTopPerformers = async (
     params: { limit }
   });
   return res.data?.data || { top_raiders: [], top_defenders: [] };
+};
+
+/**
+ * Fetch Play-by-Play match timeline events (raids, substitutions, timeouts, cards, reviews)
+ */
+export const fetchPlayByPlay = async (
+  matchId: number | string,
+  options?: {
+    order?: 'asc' | 'desc';
+    game_phase?: string;
+    page?: number;
+    limit?: number;
+  }
+): Promise<PlayByPlayData> => {
+  const client = getClient();
+  const res = await client.get(`/api/public/matches/${matchId}/play-by-play`, {
+    params: options
+  });
+  return res.data?.data;
+};
+
+/**
+ * Fetch Raid-by-Raid match timeline (alias for play-by-play)
+ */
+export const fetchRaidByRaid = async (
+  matchId: number | string,
+  options?: {
+    order?: 'asc' | 'desc';
+    game_phase?: string;
+    page?: number;
+    limit?: number;
+  }
+): Promise<PlayByPlayData> => {
+  const client = getClient();
+  const res = await client.get(`/api/public/matches/${matchId}/raid-by-raid`, {
+    params: options
+  });
+  return res.data?.data;
 };
 
 /**

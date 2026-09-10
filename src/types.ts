@@ -308,3 +308,157 @@ export interface TournamentStatsData {
   team_stats: TournamentTeamStats[];
   top_performers: TopPerformersData;
 }
+
+// --------------------------------------------------------------------------
+// Play-by-Play and Raid-by-Raid Timeline Types
+// --------------------------------------------------------------------------
+
+export interface PlayByPlayPlayerInfo {
+  id: number;
+  name: string;
+  jersey_no?: number | string | null;
+  image_url?: string | null;
+  role?: string;
+  position?: string | null;
+}
+
+export interface PlayByPlayTeamInfo {
+  id: number;
+  name: string;
+  short_name?: string;
+  logo_url?: string | null;
+  score?: number;
+}
+
+export interface PlayByPlayMicroEvent {
+  type: string;
+  description: string;
+  points?: number;
+  player?: {
+    id: number;
+    name: string;
+    jersey_no?: number | string | null;
+  } | null;
+  defenders?: Array<{
+    id: number;
+    name: string;
+    jersey_no?: number | string | null;
+  }>;
+  tacklers?: Array<{
+    id: number;
+    name: string;
+    jersey_no?: number | string | null;
+    role?: string;
+  }>;
+  team?: {
+    id: number;
+    name: string;
+  } | null;
+  is_super_tackle?: boolean;
+}
+
+export interface PlayByPlayPoints {
+  touch_points?: number;
+  bonus_points?: number;
+  tackle_points?: number;
+  super_tackle_points?: number;
+  all_out_points?: number;
+  power_play_points?: number;
+  technical_points?: number;
+  raiding_team_points?: number;
+  defending_team_points?: number;
+  team_a_points: number;
+  team_b_points: number;
+}
+
+export interface PlayByPlayEvent {
+  event_type: 'raid' | 'substitution' | 'timeout' | 'card' | 'review';
+  id: number;
+  sequence_number?: number | null;
+  game_phase: string;
+  clock: string;
+  clock_seconds: number;
+  clock_formatted: string;
+  created_at: number;
+  score: {
+    team_a: number;
+    team_b: number;
+  };
+  formatted_score?: string | null;
+  title: string;
+  subtitle?: string | null;
+  badges: string[];
+  points: PlayByPlayPoints;
+
+  // Raid specific fields
+  raid_number?: number;
+  raiding_team?: PlayByPlayTeamInfo;
+  defending_team?: PlayByPlayTeamInfo;
+  raider?: PlayByPlayPlayerInfo;
+  outcome?: 'successful' | 'unsuccessful' | 'empty' | string;
+  raid_type?: 'normal' | 'do_or_die' | string;
+  touched_defenders?: PlayByPlayPlayerInfo[];
+  tacklers?: PlayByPlayPlayerInfo[];
+  self_out_defenders?: PlayByPlayPlayerInfo[];
+  raid_events?: PlayByPlayMicroEvent[];
+
+  // Substitution specific fields
+  in_player?: PlayByPlayPlayerInfo;
+  out_player?: PlayByPlayPlayerInfo;
+  team?: PlayByPlayTeamInfo;
+
+  // Card specific fields
+  card_type?: string;
+  target_player?: PlayByPlayPlayerInfo;
+  target_staff?: { id: number; name: string; role: string } | null;
+
+  // Review specific fields
+  review_outcome?: string;
+}
+
+export interface PlayByPlayMatchInfo {
+  id: number;
+  external_fixture_id?: number | string | null;
+  match_number?: number | null;
+  tournament_id: number;
+  tournament_name?: string | null;
+  status: string;
+  game_phase: string;
+  scheduled_at?: string | null;
+  venue_name?: string | null;
+  summary_text: string;
+  teams: {
+    team_a: PlayByPlayTeamInfo;
+    team_b: PlayByPlayTeamInfo;
+  };
+  current_score: {
+    team_a: number;
+    team_b: number;
+  };
+}
+
+export interface PlayByPlayPhases {
+  first_half: PlayByPlayEvent[];
+  second_half: PlayByPlayEvent[];
+  extra_time_first_half: PlayByPlayEvent[];
+  extra_time_second_half: PlayByPlayEvent[];
+  five_raids: PlayByPlayEvent[];
+  golden_raid: PlayByPlayEvent[];
+  other: PlayByPlayEvent[];
+  [key: string]: PlayByPlayEvent[];
+}
+
+export interface PlayByPlayPagination {
+  totalRecords: number;
+  currentPage: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export interface PlayByPlayData {
+  match: PlayByPlayMatchInfo;
+  events: PlayByPlayEvent[];
+  phases: PlayByPlayPhases;
+  pagination?: PlayByPlayPagination;
+}
+
