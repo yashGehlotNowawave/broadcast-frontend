@@ -10,7 +10,7 @@ import type {
 } from '../types';
 
 //https://scoring-tool-backend-974618494728.asia-south1.run.app
-const defaultBackendUrl = import.meta.env.VITE_BACKEND_URL || 'https://scoring-tool-backend-974618494728.asia-south1.run.app';
+const defaultBackendUrl = import.meta.env.VITE_BACKEND_URL || 'https://services-kbdtracker.elev8sportz.com/';
 const savedUrl = localStorage.getItem('backend_base_url');
 let BASE_URL = savedUrl || defaultBackendUrl;
 
