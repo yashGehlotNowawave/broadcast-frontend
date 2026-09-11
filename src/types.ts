@@ -100,6 +100,7 @@ export interface LastRaid {
   raid_number: number;
   raider_id?: number;
   raider_name?: string;
+  raider_jersey?: number | string | null;
   outcome?: string;
   points_scored?: number;
   touch_points?: number;
@@ -119,6 +120,7 @@ export interface MatchStatusData {
   current_raiding_team_id?: number | null;
   selected_raider_id?: number | null;
   selected_raider_name?: string | null;
+  selected_raider_jersey?: number | string | null;
   is_do_or_die_raid?: boolean;
   session?: MatchSessionSummary | null;
   team_a?: TeamScoreState;

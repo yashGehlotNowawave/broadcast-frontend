@@ -114,6 +114,7 @@ export const App: React.FC = () => {
               current_raiding_team_id: raidingTeamId,
               selected_raider_id: raiderId ? Number(raiderId) : undefined,
               selected_raider_name: displayRaiderName,
+              selected_raider_jersey: jerseyNo,
               update_message: `Raider Selected: ${displayRaiderName}`
             } as any;
           }
@@ -123,6 +124,7 @@ export const App: React.FC = () => {
             current_raiding_team_id: raidingTeamId ?? prev.current_raiding_team_id,
             selected_raider_id: raiderId ? Number(raiderId) : prev.selected_raider_id,
             selected_raider_name: displayRaiderName,
+            selected_raider_jersey: jerseyNo ?? prev.selected_raider_jersey,
             update_message: `Raider Selected: ${displayRaiderName}`
           };
         });
@@ -182,6 +184,7 @@ export const App: React.FC = () => {
                 const p = allPlayers.find((player: any) => (player.id || player.player_id) === Number(sId));
                 if (p) {
                   data.selected_raider_name = p.full_name || p.name;
+                  data.selected_raider_jersey = p.jersey_no;
                 }
               }
               if (data.update_message && data.update_message.includes('undefined')) {
@@ -264,6 +267,7 @@ export const App: React.FC = () => {
             const p = allPlayers.find((player: any) => (player.id || player.player_id) === Number(sId));
             if (p) {
               data.selected_raider_name = p.full_name || p.name;
+              data.selected_raider_jersey = p.jersey_no;
             }
           }
           if (data.update_message && data.update_message.includes('undefined')) {

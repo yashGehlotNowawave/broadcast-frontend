@@ -49,8 +49,25 @@ export const PKLMatchScoreboard: React.FC<PKLMatchScoreboardProps> = ({
   const isTeamARaiding = raidingTeamId && teamAId ? Number(raidingTeamId) === Number(teamAId) : false;
   const isTeamBRaiding = raidingTeamId && teamAId ? Number(raidingTeamId) !== Number(teamAId) : false;
 
-  // Selected raider display name
-  const selectedRaiderName = matchData?.selected_raider_name || matchData?.last_raid?.raider_name || null;
+  // Selected raider display name & jersey number
+  const selectedRaiderId = matchData?.selected_raider_id || (matchData as any)?.session?.selected_raider_id;
+  const allCourtPlayers = [
+    ...(matchData?.team_a?.mat || []), ...(matchData?.team_a?.bench || []), ...(matchData?.team_a?.substitute || []), ...(matchData?.team_a?.court_players || []),
+    ...(matchData?.team_b?.mat || []), ...(matchData?.team_b?.bench || []), ...(matchData?.team_b?.substitute || []), ...(matchData?.team_b?.court_players || [])
+  ];
+  const matchedRaider = selectedRaiderId
+    ? allCourtPlayers.find((p: any) => Number(p.id || p.player_id) === Number(selectedRaiderId))
+    : null;
+
+  const selectedRaiderName = matchData?.selected_raider_name || matchedRaider?.full_name || matchedRaider?.name || matchData?.last_raid?.raider_name || null;
+  const selectedRaiderJersey = matchData?.selected_raider_jersey ?? matchedRaider?.jersey_no ?? matchData?.last_raid?.raider_jersey ?? (matchData?.last_raid as any)?.raider?.jersey_no ?? (
+    selectedRaiderName
+      ? allCourtPlayers.find((p: any) => {
+          const n = (p.full_name || p.name || '').trim().toLowerCase();
+          return n && n === selectedRaiderName.trim().toLowerCase();
+        })?.jersey_no
+      : null
+  );
 
   // Format Phase Label
   const formatPhaseLabel = (phase: string) => {
@@ -229,6 +246,9 @@ export const PKLMatchScoreboard: React.FC<PKLMatchScoreboardProps> = ({
             <div className="match-summary-banner centered">
               <div className="raider-selected-banner">
                 <span className="raider-selected-label">RAIDER SELECTED:</span>
+                {selectedRaiderJersey != null && selectedRaiderJersey !== '' && !selectedRaiderName.trim().startsWith('#') && (
+                  <span className="raider-selected-jersey">#{selectedRaiderJersey}</span>
+                )}
                 <span className="raider-selected-name">{selectedRaiderName.toUpperCase()}</span>
               </div>
             </div>
