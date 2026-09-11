@@ -18,12 +18,164 @@ import {
 } from 'lucide-react';
 import { fetchPlayByPlay } from '../services/api';
 import { subscribeEvents } from '../services/socket';
-import type { PlayByPlayData } from '../types';
+import type { PlayByPlayData, PlayByPlayEvent } from '../types';
 import { TeamLogo, PlayerAvatar } from './TeamLogo';
 
 interface PlayByPlayPanelProps {
   matchId: number | string;
 }
+
+const getRaiderJerseyNo = (evt: PlayByPlayEvent): number | string | null | undefined => {
+  if (evt.raider?.jersey_no != null && evt.raider.jersey_no !== '') {
+    return evt.raider.jersey_no;
+  }
+  const microPlayer = evt.raid_events?.find((m) => m.player?.id === evt.raider?.id && m.player?.jersey_no != null);
+  if (microPlayer?.player?.jersey_no != null && microPlayer.player.jersey_no !== '') {
+    return microPlayer.player.jersey_no;
+  }
+  return null;
+};
+
+const renderRaiderTitle = (evt: PlayByPlayEvent) => {
+  const jerseyNo = getRaiderJerseyNo(evt);
+  const title = evt.title || '';
+
+  // If no jersey number, or title already has jersey number prefix '#...' or contains '#{jerseyNo}'
+  if (jerseyNo == null || jerseyNo === '' || title.trim().startsWith('#') || title.includes(`#${jerseyNo}`)) {
+    return <>{title}</>;
+  }
+
+  const raiderName = evt.raider?.name?.trim();
+  if (raiderName && title.includes(raiderName)) {
+    const parts = title.split(raiderName);
+    return (
+      <>
+        {parts[0]}
+        <span className="pbp-raider-jersey">#{jerseyNo}</span>
+        {raiderName}
+        {parts.slice(1).join(raiderName)}
+      </>
+    );
+  }
+
+  return (
+    <>
+      <span className="pbp-raider-jersey">#{jerseyNo}</span>
+      {title}
+    </>
+  );
+};
+
+const getDefendersMap = (evt: PlayByPlayEvent): Map<string, number | string> => {
+  const map = new Map<string, number | string>();
+  const addDefender = (p?: { name?: string; jersey_no?: number | string | null } | null) => {
+    if (p?.name && p.jersey_no != null && p.jersey_no !== '') {
+      map.set(p.name.trim(), p.jersey_no);
+    }
+  };
+
+  (evt.tacklers || []).forEach(addDefender);
+  (evt.touched_defenders || []).forEach(addDefender);
+  (evt.self_out_defenders || []).forEach(addDefender);
+
+  const defGroup = (evt as any).defenders;
+  if (defGroup) {
+    (defGroup.tacklers || []).forEach(addDefender);
+    (defGroup.touched_defenders || []).forEach(addDefender);
+    (defGroup.self_out_defenders || []).forEach(addDefender);
+  }
+
+  (evt.raid_events || []).forEach((m: any) => {
+    (m.defenders || []).forEach(addDefender);
+    (m.tacklers || []).forEach(addDefender);
+    if (m.player && m.player.id !== evt.raider?.id) addDefender(m.player);
+  });
+
+  return map;
+};
+
+const renderEventSubtitle = (evt: PlayByPlayEvent) => {
+  const subtitle = evt.subtitle;
+  if (!subtitle) return null;
+
+  const defendersMap = getDefendersMap(evt);
+  if (defendersMap.size === 0) {
+    return <>{subtitle}</>;
+  }
+
+  const getJersey = (name: string): number | string | null => {
+    const trimmed = name.trim();
+    if (defendersMap.has(trimmed)) return defendersMap.get(trimmed)!;
+    const lower = trimmed.toLowerCase();
+    for (const [k, v] of defendersMap.entries()) {
+      if (k.toLowerCase() === lower) return v;
+    }
+    return null;
+  };
+
+  // If subtitle starts with "Defenders: "
+  const defendersPrefix = 'Defenders: ';
+  if (subtitle.startsWith(defendersPrefix)) {
+    const listStr = subtitle.slice(defendersPrefix.length);
+    const names = listStr.split(',').map((s) => s.trim());
+
+    return (
+      <>
+        <span className="pbp-subtitle-label">Defenders: </span>
+        {names.map((name, idx) => {
+          const jerseyNo = getJersey(name);
+          const alreadyHasJersey = name.startsWith('#');
+          return (
+            <React.Fragment key={`def-${idx}`}>
+              {idx > 0 && <span className="pbp-comma">, </span>}
+              <span className="pbp-defender-name-wrap">
+                {jerseyNo != null && !alreadyHasJersey && (
+                  <span className="pbp-defender-jersey">#{jerseyNo}</span>
+                )}
+                {name}
+              </span>
+            </React.Fragment>
+          );
+        })}
+      </>
+    );
+  }
+
+  // General case: Check if any defender name is present in subtitle
+  const foundDefenders: Array<{ name: string; jerseyNo: number | string }> = [];
+  for (const [name, jerseyNo] of defendersMap.entries()) {
+    if (subtitle.includes(name) && !subtitle.includes(`#${jerseyNo}`)) {
+      foundDefenders.push({ name, jerseyNo });
+    }
+  }
+
+  if (foundDefenders.length === 0) {
+    return <>{subtitle}</>;
+  }
+
+  // Tokenize and replace defender names with their jersey badges
+  // Sort names by length descending to avoid partial replacements
+  foundDefenders.sort((a, b) => b.name.length - a.name.length);
+  const regex = new RegExp(`(${foundDefenders.map((d) => d.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'g');
+  const tokens = subtitle.split(regex);
+
+  return (
+    <>
+      {tokens.map((token, idx) => {
+        const jerseyNo = getJersey(token);
+        if (jerseyNo != null) {
+          return (
+            <span key={`token-${idx}`} className="pbp-defender-name-wrap">
+              <span className="pbp-defender-jersey">#{jerseyNo}</span>
+              {token}
+            </span>
+          );
+        }
+        return <span key={`token-${idx}`}>{token}</span>;
+      })}
+    </>
+  );
+};
 
 export const PlayByPlayPanel: React.FC<PlayByPlayPanelProps> = ({ matchId }) => {
   const [data, setData] = useState<PlayByPlayData | null>(null);
@@ -139,14 +291,20 @@ export const PlayByPlayPanel: React.FC<PlayByPlayPanelProps> = ({ matchId }) => 
         }
       }
 
-      // Search query (raider name, defenders, titles)
+      // Search query (raider name, defenders, titles, jersey)
       if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
+        const q = searchQuery.toLowerCase().trim();
+        const cleanQ = q.replace(/^#/, '');
         const matchTitle = evt.title?.toLowerCase().includes(q);
         const matchSubtitle = evt.subtitle?.toLowerCase().includes(q);
         const matchRaider = evt.raider?.name?.toLowerCase().includes(q);
-        const matchNumber = evt.raid_number ? String(evt.raid_number).includes(q) : false;
-        return matchTitle || matchSubtitle || matchRaider || matchNumber;
+        const matchJersey = evt.raider?.jersey_no != null && String(evt.raider.jersey_no).toLowerCase().includes(cleanQ);
+        const defMap = getDefendersMap(evt);
+        const matchDefenderJersey = Array.from(defMap.values()).some((j) =>
+          String(j).toLowerCase().includes(cleanQ)
+        );
+        const matchNumber = evt.raid_number ? String(evt.raid_number).includes(cleanQ) : false;
+        return matchTitle || matchSubtitle || matchRaider || matchJersey || matchDefenderJersey || matchNumber;
       }
 
       return true;
@@ -565,8 +723,8 @@ export const PlayByPlayPanel: React.FC<PlayByPlayPanelProps> = ({ matchId }) => 
                               fallbackClassName="pbp-raider-avatar-fallback"
                             />
                             <div className="pbp-raider-meta">
-                              <h3 className="pbp-event-title">{evt.title}</h3>
-                              {evt.subtitle && <div className="pbp-event-subtitle">{evt.subtitle}</div>}
+                              <h3 className="pbp-event-title">{renderRaiderTitle(evt)}</h3>
+                              {evt.subtitle && <div className="pbp-event-subtitle">{renderEventSubtitle(evt)}</div>}
                             </div>
                           </div>
 

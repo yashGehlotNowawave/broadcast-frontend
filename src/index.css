@@ -3781,10 +3781,65 @@ a {
   line-height: 1.25;
 }
 
+.pbp-raider-jersey {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono, 'Outfit', monospace);
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--pkl-orange, #ff5500);
+  background: var(--pkl-orange-light, #fff3ed);
+  border: 1px solid rgba(255, 85, 0, 0.28);
+  padding: 0.05rem 0.38rem;
+  border-radius: 4px;
+  margin-right: 0.4rem;
+  line-height: 1.25;
+  vertical-align: 1px;
+}
+
 .pbp-event-subtitle {
   font-size: 0.8rem;
   color: var(--text-muted);
-  margin-top: 0.2rem;
+  margin-top: 0.25rem;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  row-gap: 0.25rem;
+}
+
+.pbp-subtitle-label {
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-right: 0.25rem;
+}
+
+.pbp-defender-name-wrap {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.pbp-defender-jersey {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono, 'Outfit', monospace);
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--pkl-green, #16a34a);
+  background: var(--pkl-green-light, #f0fdf4);
+  border: 1px solid rgba(22, 163, 74, 0.32);
+  padding: 0.02rem 0.32rem;
+  border-radius: 3px;
+  margin-right: 0.25rem;
+  margin-left: 0.1rem;
+  line-height: 1.2;
+}
+
+.pbp-comma {
+  margin-right: 0.3rem;
+  color: var(--text-muted);
 }
 
 .pbp-points-badge-col {
